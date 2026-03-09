@@ -38,6 +38,11 @@ export async function getSession(): Promise<AppSession | null> {
     // Verify the Firebase ID token
     const decoded = await adminAuth.verifyIdToken(token);
 
+    // Extract tenant ID from the decoded token (present for multi-tenant SAML auth)
+    const tenantId = (decoded as Record<string, unknown>).firebase
+      ? ((decoded as Record<string, unknown>).firebase as Record<string, unknown>).tenant as string | undefined
+      : undefined;
+
     // Fetch user doc from Firestore for extra fields
     const userDoc = await users.findById(decoded.uid);
 
@@ -53,6 +58,7 @@ export async function getSession(): Promise<AppSession | null> {
           organizationId: null,
           theme: null,
           emailVerified: decoded.email_verified ? new Date() : null,
+          tenantId: tenantId || null,
         },
       };
     }
@@ -66,6 +72,7 @@ export async function getSession(): Promise<AppSession | null> {
         organizationId: userDoc.organizationId,
         theme: userDoc.theme,
         emailVerified: userDoc.emailVerified,
+        tenantId: tenantId || null,
       },
     };
   } catch (error) {

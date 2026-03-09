@@ -3,6 +3,7 @@ import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import type {
   UserDoc,
   OrganizationDoc,
+  DomainMappingDoc,
   ADOConnectionDoc,
   ProgramTypeDoc,
   ProjectDoc,
@@ -71,6 +72,7 @@ const adoConnectionsCol = adminDb.collection("adoConnections");
 const aiProviderSettingsCol = adminDb.collection("aiProviderSettings");
 const aiAgentSettingsCol = adminDb.collection("aiAgentSettings");
 const aiAgentJobsCol = adminDb.collection("aiAgentJobs");
+const domainMappingsCol = adminDb.collection("domainMappings");
 const verificationTokensCol = adminDb.collection("verificationTokens");
 
 // Subcollection helpers
@@ -190,9 +192,26 @@ export const organizations = {
     return docToData<OrganizationDoc>(snap);
   },
 
+  async findByTenantId(tenantId: string): Promise<OrganizationDoc | null> {
+    const snap = await organizationsCol
+      .where("firebaseTenantId", "==", tenantId)
+      .limit(1)
+      .get();
+    if (snap.empty) return null;
+    return docToData<OrganizationDoc>(snap.docs[0]);
+  },
+
   async create(data: { name: string }): Promise<OrganizationDoc> {
     const now = new Date();
-    const docData = { name: data.name, createdAt: now, updatedAt: now };
+    const docData = {
+      name: data.name,
+      domain: null,
+      firebaseTenantId: null,
+      samlProviderId: null,
+      ssoEnabled: false,
+      createdAt: now,
+      updatedAt: now,
+    };
     const ref = await organizationsCol.add(docData);
     return { id: ref.id, ...docData };
   },
@@ -206,6 +225,44 @@ export const organizations = {
 
   async delete(id: string): Promise<void> {
     await organizationsCol.doc(id).delete();
+  },
+};
+
+// ─── Domain Mappings ──────────────────────────────────────────────────────
+
+export const domainMappings = {
+  async findByDomain(domain: string): Promise<DomainMappingDoc | null> {
+    const snap = await domainMappingsCol.doc(domain).get();
+    return docToData<DomainMappingDoc>(snap);
+  },
+
+  async upsert(
+    domain: string,
+    data: { organizationId: string; firebaseTenantId: string; samlProviderId: string }
+  ): Promise<DomainMappingDoc> {
+    const now = new Date();
+    await domainMappingsCol.doc(domain).set(
+      {
+        organizationId: data.organizationId,
+        firebaseTenantId: data.firebaseTenantId,
+        samlProviderId: data.samlProviderId,
+        updatedAt: now,
+        createdAt: now,
+      },
+      { merge: true }
+    );
+    return (await domainMappings.findByDomain(domain))!;
+  },
+
+  async deleteByDomain(domain: string): Promise<void> {
+    await domainMappingsCol.doc(domain).delete();
+  },
+
+  async findByOrganizationId(organizationId: string): Promise<DomainMappingDoc[]> {
+    const snap = await domainMappingsCol
+      .where("organizationId", "==", organizationId)
+      .get();
+    return queryToData<DomainMappingDoc>(snap);
   },
 };
 

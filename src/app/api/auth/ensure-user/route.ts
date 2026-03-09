@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/firebase/auth";
-import { users } from "@/lib/firebase/db";
+import { users, organizations } from "@/lib/firebase/db";
 
 /**
  * POST /api/auth/ensure-user
@@ -14,11 +14,25 @@ export async function POST() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id, email, name, image } = session.user;
+    const { id, email, name, image, tenantId } = session.user;
+
+    // Resolve organization for SAML users via tenantId
+    let samlOrgId: string | null = null;
+    if (tenantId) {
+      const org = await organizations.findByTenantId(tenantId);
+      if (org) {
+        samlOrgId = org.id;
+      }
+    }
 
     // Check if user doc already exists
     const existing = await users.findById(id);
     if (existing) {
+      // If SAML user has no org yet, assign them
+      if (samlOrgId && !existing.organizationId) {
+        const updated = await users.update(id, { organizationId: samlOrgId });
+        return NextResponse.json({ user: updated });
+      }
       return NextResponse.json({ user: existing });
     }
 
@@ -28,6 +42,7 @@ export async function POST() {
         email: email || null,
         name: name || null,
         image: image || null,
+        organizationId: samlOrgId,
         theme: "dark",
         maxHoursPerWeek: 40,
         licenseType: "FREE",

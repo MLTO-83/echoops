@@ -13,7 +13,7 @@ import {
   signOut as firebaseSignOut,
   User,
 } from "firebase/auth";
-import { auth } from "@/lib/firebase/client";
+import { auth, setTenantId } from "@/lib/firebase/client";
 
 interface SessionUser {
   id: string;
@@ -163,6 +163,7 @@ export function useSession() {
  * Sign out from Firebase and clear cookies
  */
 export async function signOut(options?: { callbackUrl?: string }) {
+  setTenantId(null);
   await firebaseSignOut(auth);
   document.cookie = "__session=; path=/; max-age=0";
   if (options?.callbackUrl) {

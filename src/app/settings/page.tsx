@@ -48,6 +48,18 @@ export default function SettingsPage() {
   const [agentLoading, setAgentLoading] = useState(false);
   const [agentMessage, setAgentMessage] = useState<string | null>(null);
 
+  // SSO/SAML settings state
+  const [ssoDomain, setSsoDomain] = useState("");
+  const [idpEntityId, setIdpEntityId] = useState("");
+  const [ssoUrl, setSsoUrl] = useState("");
+  const [x509Certificate, setX509Certificate] = useState("");
+  const [ssoLoading, setSsoLoading] = useState(false);
+  const [ssoMessage, setSsoMessage] = useState<string | null>(null);
+  const [ssoFetching, setSsoFetching] = useState(true);
+  const [ssoEnabled, setSsoEnabled] = useState(false);
+  const [spMetadata, setSpMetadata] = useState<{ acsUrl: string; entityId: string } | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
   // Hover state for card animations
   const [isHovering, setIsHovering] = useState(-1);
 
@@ -174,6 +186,25 @@ export default function SettingsPage() {
         console.error("Error fetching AI provider settings:", error);
       } finally {
         setAiFetching(false);
+      }
+    });
+
+    // Fetch SSO/SAML settings
+    fetch("/api/settings/saml").then(async (res) => {
+      setSsoFetching(true);
+      try {
+        if (res.ok) {
+          const data = await res.json();
+          setSsoDomain(data.domain || "");
+          setSsoEnabled(data.ssoEnabled || false);
+          if (data.spMetadata) {
+            setSpMetadata(data.spMetadata);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching SAML settings:", error);
+      } finally {
+        setSsoFetching(false);
       }
     });
 
@@ -343,6 +374,61 @@ export default function SettingsPage() {
     } finally {
       setAgentLoading(false);
     }
+  };
+
+  const saveSaml = async () => {
+    if (!ssoDomain || !idpEntityId || !ssoUrl || !x509Certificate) return;
+    setSsoLoading(true);
+    setSsoMessage(null);
+    try {
+      const res = await fetch("/api/settings/saml", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          domain: ssoDomain,
+          idpEntityId,
+          ssoUrl,
+          x509Certificate,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to save SAML config");
+      setSsoEnabled(true);
+      setSsoMessage("SAML SSO configured successfully.");
+      if (data.spMetadata) {
+        setSpMetadata(data.spMetadata);
+      }
+    } catch (err) {
+      setSsoMessage(err instanceof Error ? err.message : "Error saving SAML config");
+    } finally {
+      setSsoLoading(false);
+    }
+  };
+
+  const disableSso = async () => {
+    setSsoLoading(true);
+    setSsoMessage(null);
+    try {
+      const res = await fetch("/api/settings/saml", { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to disable SSO");
+      setSsoEnabled(false);
+      setSpMetadata(null);
+      setSsoDomain("");
+      setIdpEntityId("");
+      setSsoUrl("");
+      setX509Certificate("");
+      setSsoMessage("SSO has been disabled.");
+    } catch (err) {
+      setSsoMessage(err instanceof Error ? err.message : "Error disabling SSO");
+    } finally {
+      setSsoLoading(false);
+    }
+  };
+
+  const copyToClipboard = (text: string, field: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(field);
+    setTimeout(() => setCopiedField(null), 2000);
   };
 
   if (status === "loading") {
@@ -881,6 +967,195 @@ export default function SettingsPage() {
                   </svg>
                 )}
               </button>
+            </div>
+          </div>
+        </div>
+        {/* SSO / SAML Configuration */}
+        <div
+          className={`card-neo group transition-all duration-300 ease-out p-8 relative overflow-hidden
+                     ${
+                       isHovering === 3
+                         ? "transform -translate-y-2 shadow-neo-hover dark:shadow-neo-white-hover"
+                         : "shadow-neo dark:shadow-neo-white"
+                     }`}
+          onMouseEnter={() => setIsHovering(3)}
+          onMouseLeave={() => setIsHovering(-1)}
+        >
+          {/* Background decoration */}
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 ease-out"></div>
+          <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-full blur-xl transform translate-x-12 -translate-y-1/2 group-hover:translate-x-8 transition-all duration-700"></div>
+
+          <div className="relative z-10">
+            <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-4">
+              <h2 className="text-2xl font-bold font-display text-gray-900 dark:text-white">
+                SSO / SAML Configuration
+              </h2>
+
+              {ssoFetching ? (
+                <div className="flex items-center space-x-2 mt-2 md:mt-0">
+                  <div className="animate-spin h-4 w-4 border-2 border-blue-500 rounded-full border-t-transparent"></div>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    Loading configuration...
+                  </span>
+                </div>
+              ) : ssoEnabled ? (
+                <div className="flex items-center mt-2 md:mt-0 space-x-2">
+                  <div className="h-3 w-3 rounded-full bg-green-500"></div>
+                  <span className="text-sm font-medium">SSO Enabled</span>
+                </div>
+              ) : (
+                <div className="flex items-center mt-2 md:mt-0 space-x-2">
+                  <div className="h-3 w-3 rounded-full bg-gray-400"></div>
+                  <span className="text-sm font-medium">Not Configured</span>
+                </div>
+              )}
+            </div>
+
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Configure SAML SSO to allow your team to sign in through your corporate identity provider (Okta, Azure AD, etc.)
+            </p>
+
+            <div className="space-y-4">
+              <label className="flex flex-col">
+                <span className="text-gray-800 dark:text-white mb-1">
+                  Email Domain
+                </span>
+                <input
+                  type="text"
+                  value={ssoDomain}
+                  onChange={(e) => setSsoDomain(e.target.value)}
+                  placeholder="company.com"
+                  className="input-neo"
+                  disabled={ssoEnabled}
+                />
+                <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Users with this email domain will be prompted to use SSO
+                </span>
+              </label>
+              <label className="flex flex-col">
+                <span className="text-gray-800 dark:text-white mb-1">
+                  IdP Entity ID
+                </span>
+                <input
+                  type="text"
+                  value={idpEntityId}
+                  onChange={(e) => setIdpEntityId(e.target.value)}
+                  placeholder="https://idp.company.com/metadata"
+                  className="input-neo"
+                />
+              </label>
+              <label className="flex flex-col">
+                <span className="text-gray-800 dark:text-white mb-1">
+                  SSO URL (Single Sign-On URL)
+                </span>
+                <input
+                  type="text"
+                  value={ssoUrl}
+                  onChange={(e) => setSsoUrl(e.target.value)}
+                  placeholder="https://idp.company.com/sso/saml"
+                  className="input-neo"
+                />
+              </label>
+              <label className="flex flex-col">
+                <span className="text-gray-800 dark:text-white mb-1">
+                  X.509 Certificate
+                </span>
+                <textarea
+                  value={x509Certificate}
+                  onChange={(e) => setX509Certificate(e.target.value)}
+                  placeholder="-----BEGIN CERTIFICATE-----&#10;...&#10;-----END CERTIFICATE-----"
+                  rows={4}
+                  className="input-neo font-mono text-xs"
+                />
+              </label>
+
+              {ssoMessage && (
+                <div
+                  className={`text-sm p-2 rounded ${
+                    ssoMessage.toLowerCase().includes("success") || ssoMessage.toLowerCase().includes("configured")
+                      ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                      : ssoMessage.toLowerCase().includes("disabled")
+                      ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                      : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                  }`}
+                >
+                  {ssoMessage}
+                </div>
+              )}
+
+              {/* SP Metadata display (after successful config) */}
+              {ssoEnabled && spMetadata && (
+                <div className="mt-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg space-y-3">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                    Service Provider Metadata
+                  </h3>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    Provide these values to your identity provider:
+                  </p>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between p-2 bg-white dark:bg-gray-700 rounded">
+                      <div className="min-w-0 flex-1 mr-2">
+                        <span className="block text-xs font-medium text-gray-500 dark:text-gray-400">ACS URL</span>
+                        <span className="block text-sm text-gray-900 dark:text-white truncate">{spMetadata.acsUrl}</span>
+                      </div>
+                      <button
+                        onClick={() => copyToClipboard(spMetadata.acsUrl, "acsUrl")}
+                        className="text-xs px-2 py-1 rounded bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors flex-shrink-0"
+                      >
+                        {copiedField === "acsUrl" ? "Copied!" : "Copy"}
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between p-2 bg-white dark:bg-gray-700 rounded">
+                      <div className="min-w-0 flex-1 mr-2">
+                        <span className="block text-xs font-medium text-gray-500 dark:text-gray-400">SP Entity ID</span>
+                        <span className="block text-sm text-gray-900 dark:text-white truncate">{spMetadata.entityId}</span>
+                      </div>
+                      <button
+                        onClick={() => copyToClipboard(spMetadata.entityId, "entityId")}
+                        className="text-xs px-2 py-1 rounded bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors flex-shrink-0"
+                      >
+                        {copiedField === "entityId" ? "Copied!" : "Copy"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={saveSaml}
+                  disabled={ssoLoading || !ssoDomain || !idpEntityId || !ssoUrl || !x509Certificate}
+                  className="button-primary inline-flex items-center group"
+                >
+                  <span>{ssoLoading ? "Saving..." : "Save Configuration"}</span>
+                  {!ssoLoading && (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-4 w-4 ml-2 transform group-hover:translate-x-1 transition-transform"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  )}
+                </button>
+
+                {ssoEnabled && (
+                  <button
+                    onClick={disableSso}
+                    disabled={ssoLoading}
+                    className="button-neo inline-flex items-center text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                  >
+                    <span>Disable SSO</span>
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>

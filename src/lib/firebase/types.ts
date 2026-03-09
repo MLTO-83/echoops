@@ -18,6 +18,19 @@ export interface UserDoc {
 export interface OrganizationDoc {
   id: string;
   name: string;
+  domain: string | null;
+  firebaseTenantId: string | null;
+  samlProviderId: string | null;
+  ssoEnabled: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface DomainMappingDoc {
+  id: string; // doc ID = domain
+  organizationId: string;
+  firebaseTenantId: string;
+  samlProviderId: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -170,5 +183,6 @@ export interface AppSession {
     organizationId?: string | null;
     theme?: string | null;
     emailVerified?: Date | null;
+    tenantId?: string | null;
   };
 }

@@ -1,11 +1,17 @@
 "use client";
 
 import { signInWithPopup } from "firebase/auth";
-import { auth, githubProvider, googleProvider } from "@/lib/firebase/client";
+import { auth, githubProvider, googleProvider, createSAMLProvider, setTenantId } from "@/lib/firebase/client";
 import { useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
+
+interface SSOConfig {
+  tenantId: string;
+  providerId: string;
+  orgName: string;
+}
 
 function SignInContent() {
   const searchParams = useSearchParams();
@@ -13,8 +19,14 @@ function SignInContent() {
   const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
   const error = searchParams.get("error");
 
+  const [email, setEmail] = useState("");
+  const [isCheckingDomain, setIsCheckingDomain] = useState(false);
+  const [ssoConfig, setSsoConfig] = useState<SSOConfig | null>(null);
+  const [domainChecked, setDomainChecked] = useState(false);
+
   const handleGitHubSignIn = async () => {
     try {
+      setTenantId(null);
       await signInWithPopup(auth, githubProvider);
       router.push(callbackUrl);
     } catch (err: unknown) {
@@ -25,12 +37,63 @@ function SignInContent() {
 
   const handleGoogleSignIn = async () => {
     try {
+      setTenantId(null);
       await signInWithPopup(auth, googleProvider);
       router.push(callbackUrl);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : "Authentication failed";
       router.push(`/auth/error?error=${encodeURIComponent(errorMessage)}`);
     }
+  };
+
+  const checkDomain = async () => {
+    if (!email) return;
+    setIsCheckingDomain(true);
+    setSsoConfig(null);
+    try {
+      const res = await fetch("/api/auth/lookup-domain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.ssoEnabled) {
+          setSsoConfig({
+            tenantId: data.tenantId,
+            providerId: data.providerId,
+            orgName: data.organizationName,
+          });
+        }
+      }
+      setDomainChecked(true);
+    } catch {
+      // If lookup fails, just show normal sign-in options
+      setDomainChecked(true);
+    } finally {
+      setIsCheckingDomain(false);
+    }
+  };
+
+  const handleSAMLSignIn = async () => {
+    if (!ssoConfig) return;
+    try {
+      setTenantId(ssoConfig.tenantId);
+      await signInWithPopup(auth, createSAMLProvider(ssoConfig.providerId));
+      setTenantId(null);
+      router.push(callbackUrl);
+    } catch (err: unknown) {
+      setTenantId(null);
+      const errorMessage = err instanceof Error ? err.message : "SSO authentication failed";
+      router.push(`/auth/error?error=${encodeURIComponent(errorMessage)}`);
+    }
+  };
+
+  const handleUseDifferentEmail = () => {
+    setEmail("");
+    setSsoConfig(null);
+    setDomainChecked(false);
+    setTenantId(null);
   };
 
   return (
@@ -78,6 +141,80 @@ function SignInContent() {
 
             <div className="card-neo overflow-hidden p-6">
               <div className="space-y-4">
+                {/* Email input for SSO domain check */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Email address
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        if (domainChecked) {
+                          setSsoConfig(null);
+                          setDomainChecked(false);
+                        }
+                      }}
+                      placeholder="you@company.com"
+                      className="input-neo flex-1"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          checkDomain();
+                        }
+                      }}
+                    />
+                    <button
+                      onClick={checkDomain}
+                      disabled={!email || isCheckingDomain}
+                      className="button-primary px-4 py-2 text-sm whitespace-nowrap"
+                    >
+                      {isCheckingDomain ? "Checking..." : "Continue"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* SSO found — show SAML sign-in */}
+                {ssoConfig && (
+                  <div className="space-y-3">
+                    <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <p className="text-sm text-blue-800 dark:text-blue-200">
+                        SSO is configured for <strong>{ssoConfig.orgName}</strong>
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleSAMLSignIn}
+                      className="w-full flex items-center justify-center px-4 py-3 rounded-md text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-all duration-200"
+                    >
+                      <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                      </svg>
+                      Continue with SSO
+                    </button>
+                    <button
+                      onClick={handleUseDifferentEmail}
+                      className="w-full text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                    >
+                      Use a different email
+                    </button>
+                  </div>
+                )}
+
+                {/* Divider */}
+                {(!domainChecked || !ssoConfig) && (
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="px-2 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400">or</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Social sign-in buttons (always visible as fallback) */}
                 <button
                   onClick={handleGoogleSignIn}
                   className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200"
@@ -103,14 +240,16 @@ function SignInContent() {
                   Sign in with Google
                 </button>
 
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
+                {ssoConfig && (
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="px-2 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400">or</span>
+                    </div>
                   </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="px-2 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400">or</span>
-                  </div>
-                </div>
+                )}
 
                 <button
                   onClick={handleGitHubSignIn}
