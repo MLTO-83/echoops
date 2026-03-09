@@ -50,7 +50,7 @@ Before this fix, repositories with name mismatches would cause 404 errors in the
 We've included a test script that can verify the repository matcher is working with mock data:
 
 ```bash
-cd /var/www/portavi
+cd /var/www/echoops
 node scripts/test-repository-matcher.js
 ```
 
@@ -61,7 +61,7 @@ This will run through several test cases and report success or failure.
 In the production environment, you can run the deployment script which includes an option to test with the actual Azure DevOps API:
 
 ```bash
-cd /var/www/portavi
+cd /var/www/echoops
 ./scripts/deploy-repository-matcher.sh
 ```
 
@@ -87,7 +87,7 @@ If you encounter issues after deployment:
 
    ```bash
    # Run the TypeScript fix script
-   cd /var/www/portavi
+   cd /var/www/echoops
    ./scripts/fix-process-ai-jobs-type-error.sh
 
    # Then build the project
@@ -98,16 +98,16 @@ If you encounter issues after deployment:
 
    ```bash
    # Find the backup files
-   ls -la /var/www/portavi/scripts/process-ai-jobs.js.bak.*
-   ls -la /var/www/portavi/scripts/process-ai-jobs.ts.bak.*
+   ls -la /var/www/echoops/scripts/process-ai-jobs.js.bak.*
+   ls -la /var/www/echoops/scripts/process-ai-jobs.ts.bak.*
 
    # Restore from a specific backup
-   cp /var/www/portavi/scripts/process-ai-jobs.js.bak.TIMESTAMP /var/www/portavi/scripts/process-ai-jobs.js
-   cp /var/www/portavi/scripts/process-ai-jobs.ts.bak.TIMESTAMP /var/www/portavi/scripts/process-ai-jobs.ts
-   cp /var/www/portavi/scripts/ado-repository-matcher.js.bak.TIMESTAMP /var/www/portavi/scripts/ado-repository-matcher.js
+   cp /var/www/echoops/scripts/process-ai-jobs.js.bak.TIMESTAMP /var/www/echoops/scripts/process-ai-jobs.js
+   cp /var/www/echoops/scripts/process-ai-jobs.ts.bak.TIMESTAMP /var/www/echoops/scripts/process-ai-jobs.ts
+   cp /var/www/echoops/scripts/ado-repository-matcher.js.bak.TIMESTAMP /var/www/echoops/scripts/ado-repository-matcher.js
 
    # Recompile and restart the service
-   cd /var/www/portavi
+   cd /var/www/echoops
    npm run build
    sudo systemctl restart ai-job-processor.service
    ```

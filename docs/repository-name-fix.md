@@ -38,20 +38,20 @@ This resulted in 400 Bad Request errors with the message: "A project name is req
 1. Run the deployment script:
 
    ```bash
-   cd /root/portavi
+   cd /root/echoops
    ./scripts/update-pr-url-format.sh
    ```
 
 2. Test the fix:
 
    ```bash
-   cd /var/www/portavi
+   cd /var/www/echoops
    node scripts/test-repo-with-spaces.js
    ```
 
 3. If there are previously failed jobs with spaces in repository names, reset them:
    ```bash
-   cd /var/www/portavi
+   cd /var/www/echoops
    node scripts/reset-failed-jobs-with-spaces.js
    ```
 
@@ -62,7 +62,7 @@ If issues persist:
 1. Check the AI job processor logs:
 
    ```bash
-   tail -f /var/www/portavi/scripts/process-ai-jobs.log
+   tail -f /var/www/echoops/scripts/process-ai-jobs.log
    ```
 
 2. Verify the service is running:

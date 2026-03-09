@@ -62,14 +62,14 @@ The correct flow for working with Azure DevOps repositories:
 To test with repositories that have spaces in their names or unusual branch configurations:
 
 ```bash
-cd /var/www/portavi
+cd /var/www/echoops
 node scripts/test-repo-with-spaces.js "Your Repository Name"
 ```
 
 To test the automatic empty repository initialization:
 
 ```bash
-cd /var/www/portavi
+cd /var/www/echoops
 node scripts/test-empty-repo-initialization.js "EmptyTestRepo"
 ```
 
@@ -79,11 +79,11 @@ If you encounter jobs that failed due to these issues, you can reset them:
 
 ```bash
 # Reset all failed jobs with spaces in repository names
-cd /var/www/portavi
+cd /var/www/echoops
 node scripts/reset-failed-jobs-with-spaces.js
 
 # Reset a specific job by ID
-cd /var/www/portavi
+cd /var/www/echoops
 node scripts/reset-failed-jobs-with-spaces.js YOUR_JOB_ID
 ```
 
@@ -91,7 +91,7 @@ For empty repositories specifically, you can also use the handle-empty-repos.js 
 
 ```bash
 # Initialize an empty repository and reset a failed job
-cd /var/www/portavi
+cd /var/www/echoops
 node scripts/handle-empty-repos.js YOUR_JOB_ID
 ```
 

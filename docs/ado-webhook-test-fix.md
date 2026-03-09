@@ -16,7 +16,7 @@ Azure DevOps (ADO) sends a test payload when setting up a webhook subscription. 
 
 - `/src/app/api/ado/webhook/route.ts` - Updated to handle test payloads
 - `/src/app/api/ado/webhook/diagnose/route.ts` - Enhanced to detect test payloads
-- `/root/portavi/README.md` - Updated with information about test payloads
+- `/root/echoops/README.md` - Updated with information about test payloads
 - `/docs/ado-webhook-integration.md` - Added new documentation
 - `/scripts/test-ado-test-webhook.js` - Created new test script
 
@@ -27,19 +27,19 @@ You can test the fix using the provided test scripts:
 1. **Test with the special test payload ID**:
 
 ```bash
-node scripts/test-ado-test-webhook.js https://your-portavi-instance.com/api/ado/webhook
+node scripts/test-ado-test-webhook.js https://your-echoops-instance.com/api/ado/webhook
 ```
 
 2. **Test with the diagnostic endpoint**:
 
 ```bash
-node scripts/test-ado-test-webhook.js https://your-portavi-instance.com/api/ado/webhook/diagnose
+node scripts/test-ado-test-webhook.js https://your-echoops-instance.com/api/ado/webhook/diagnose
 ```
 
 3. **Test with a regular payload**:
 
 ```bash
-node scripts/test-webhook.js https://your-portavi-instance.com/api/ado/webhook your-webhook-secret scripts/ado-test-payload.json
+node scripts/test-webhook.js https://your-echoops-instance.com/api/ado/webhook your-webhook-secret scripts/ado-test-payload.json
 ```
 
 ## Expected Behavior

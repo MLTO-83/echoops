@@ -6,10 +6,10 @@ This README provides simple steps to install and run the AI Job Processor on you
 
 1. **SSH into your production server**
 
-2. **Navigate to your Portavi application directory**
+2. **Navigate to your EchoOps application directory**
 
    ```bash
-   cd /var/www/portavi
+   cd /var/www/echoops
    ```
 
 3. **Make sure the installation script is executable**
@@ -48,14 +48,14 @@ We've implemented a fix for handling repository names with spaces in Azure DevOp
 2. **Manually test repositories with spaces**:
 
    ```bash
-   cd /var/www/portavi
+   cd /var/www/echoops
    node scripts/test-repo-with-spaces.js
    ```
 
 3. **Reset any failed jobs with spaces in repository names**:
 
    ```bash
-   cd /var/www/portavi
+   cd /var/www/echoops
    node scripts/reset-failed-jobs-with-spaces.js
    ```
 
@@ -77,19 +77,19 @@ If the service fails to start:
 2. Check application logs:
 
    ```bash
-   tail -f /var/www/portavi/scripts/process-ai-jobs.log
+   tail -f /var/www/echoops/scripts/process-ai-jobs.log
    ```
 
 3. Manually run the script to see errors:
 
    ```bash
-   cd /var/www/portavi
+   cd /var/www/echoops
    node scripts/process-ai-jobs.ts
    ```
 
 4. Regenerate the Prisma client if needed:
    ```bash
-   cd /var/www/portavi
+   cd /var/www/echoops
    npx prisma generate
    ```
 

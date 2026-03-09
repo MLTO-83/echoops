@@ -101,17 +101,17 @@ try {
   console.log(`x-ado-signature: ${hmacSha256}`);
   console.log("");
   console.log("Example curl command:");
-  console.log(`curl -X POST https://portavi.eu/api/ado/webhook \\
+  console.log(`curl -X POST https://echoops.org/api/ado/webhook \\
   -H "Content-Type: application/json" \\
   -H "x-ado-signature: ${hmacSha256}" \\
   -d @${payloadFile}`);
 
   console.log("\nAdjusted webhook URLs for setting in Azure DevOps:");
   console.log(
-    `Main webhook: https://portavi.eu/api/ado/webhook?secret=${encodeURIComponent(secret)}`
+    `Main webhook: https://echoops.org/api/ado/webhook?secret=${encodeURIComponent(secret)}`
   );
   console.log(
-    `Debug webhook: https://portavi.eu/api/ado/webhook/signature-debug?secret=${encodeURIComponent(secret)}`
+    `Debug webhook: https://echoops.org/api/ado/webhook/signature-debug?secret=${encodeURIComponent(secret)}`
   );
 } catch (error) {
   console.error(`Error reading or processing file: ${error.message}`);

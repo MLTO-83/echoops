@@ -1,6 +1,6 @@
 # Empty Repository Automatic Initialization
 
-This document describes the implementation of automatic initialization for empty repositories in the Portavi AI Agent.
+This document describes the implementation of automatic initialization for empty repositories in the EchoOps AI Agent.
 
 ## Problem Description
 
@@ -56,7 +56,7 @@ async function initializeEmptyRepository(
                   path: "/README.md",
                 },
                 newContent: {
-                  content: `# ${repositoryName}\n\nThis repository was initialized for use with Portavi AI Agent.`,
+                  content: `# ${repositoryName}\n\nThis repository was initialized for use with EchoOps AI Agent.`,
                   contentType: "rawtext",
                 },
               },
@@ -127,8 +127,8 @@ Since testing locally requires production credentials, follow these steps to ver
 
    ```bash
    # Deploy the updated AI job processor code
-   cd /var/www/portavi
-   cp scripts/process-ai-jobs.js /var/www/portavi/scripts/
+   cd /var/www/echoops
+   cp scripts/process-ai-jobs.js /var/www/echoops/scripts/
 
    # Restart the AI job processor service
    systemctl restart ai-job-processor.service
@@ -139,14 +139,14 @@ Since testing locally requires production credentials, follow these steps to ver
 3. **Create a test job targeting the empty repository**:
 
    ```bash
-   cd /var/www/portavi
+   cd /var/www/echoops
    node -e "require('./scripts/test-ai-job-processor').createTestJob('EmptyTestRepo')"
    ```
 
 4. **Monitor the AI job processor logs**:
 
    ```bash
-   tail -f /var/www/portavi/scripts/process-ai-jobs.log
+   tail -f /var/www/echoops/scripts/process-ai-jobs.log
    ```
 
 5. **Expected log output** - You should see messages like:

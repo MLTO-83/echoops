@@ -1,15 +1,11 @@
 // scripts/reset-specific-job.js
 // This script resets a specific AI agent job to PENDING status for reprocessing
 
-// Dynamic path detection to handle both dev and production environments
-const fs = require("fs");
+// Note: This script previously used Prisma with dynamic path detection.
+// It will be replaced by a Firebase version.
 const path = require("path");
 
-// Check if we're in production or development environment
-const basePath = fs.existsSync("/var/www/portavi")
-  ? "/var/www/portavi"
-  : "/root/portavi";
-const prismaPath = path.join(basePath, "prisma/app/generated/prisma/client");
+const prismaPath = path.join(__dirname, "..", "prisma/app/generated/prisma/client");
 
 const { PrismaClient } = require(prismaPath);
 const prisma = new PrismaClient();

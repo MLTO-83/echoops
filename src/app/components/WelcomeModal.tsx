@@ -61,7 +61,7 @@ export default function WelcomeModal({
           {/* Modal header */}
           <div className="bg-gradient-to-r from-primary to-secondary p-6 text-white">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold">Welcome to Portavi!</h2>
+              <h2 className="text-2xl font-bold">Welcome to EchoOps!</h2>
               <button
                 onClick={handleClose}
                 className="text-white hover:text-gray-200 transition"
@@ -87,8 +87,8 @@ export default function WelcomeModal({
           <div className="p-6">
             <div className="flex justify-center mb-6">
               <Image
-                src="/Portavi logo.png"
-                alt="Portavi Logo"
+                src="/EchoOps logo.png"
+                alt="EchoOps Logo"
                 width={120}
                 height={40}
                 className="rounded-sm"
@@ -97,7 +97,7 @@ export default function WelcomeModal({
             </div>
 
             <p className="mb-4">
-              Thank you for signing up! To get started with Portavi, please
+              Thank you for signing up! To get started with EchoOps, please
               verify your email address.
             </p>
 

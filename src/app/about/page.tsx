@@ -13,7 +13,7 @@ export default function About() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative">
           <div className="space-y-1">
             <h1 className="font-display text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white tracking-tight">
-              About Portavi
+              About EchoOps
             </h1>
             <p className="text-gray-700 dark:text-white">
               Our story and mission
@@ -49,7 +49,7 @@ export default function About() {
 
           <div className="prose prose-lg max-w-none relative z-10 text-gray-700 dark:text-white">
             <p className="text-lg">
-              Portavi is a comprehensive project management platform designed to
+              EchoOps is a comprehensive project management platform designed to
               streamline workflows for development teams and organizations.
             </p>
 
@@ -57,7 +57,7 @@ export default function About() {
               Our Mission
             </h2>
             <p>
-              Our mission at Portavi is to simplify project management by
+              Our mission at EchoOps is to simplify project management by
               providing a central hub that integrates seamlessly with the tools
               developers already use. We believe in making project oversight
               accessible and intuitive, allowing teams to focus on what they do
@@ -68,7 +68,7 @@ export default function About() {
               The Team
             </h2>
             <p>
-              Portavi was built by a team of experienced developers who
+              EchoOps was built by a team of experienced developers who
               experienced first-hand the challenges of managing complex projects
               across multiple systems. Our collective experience spans decades
               in software development, project management, and team leadership.
@@ -77,7 +77,7 @@ export default function About() {
             <h2 className="text-2xl font-display font-semibold text-gray-900 dark:text-white mt-10 mb-4">
               Our Approach
             </h2>
-            <p>We've designed Portavi around several core principles:</p>
+            <p>We've designed EchoOps around several core principles:</p>
             <ul className="list-none pl-0 mb-6 space-y-4">
               {[
                 {
@@ -126,7 +126,7 @@ export default function About() {
               Get Started Today
             </h2>
             <p>
-              Ready to streamline your project workflow? Sign up for Portavi
+              Ready to streamline your project workflow? Sign up for EchoOps
               today and experience a new way to manage your development
               projects.
             </p>
@@ -161,7 +161,7 @@ export default function About() {
         <div className="border-t border-border/30 py-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="text-gray-500 dark:text-gray-400 mb-4 md:mb-0">
-              © {new Date().getFullYear()} Portavi. All rights reserved.
+              © {new Date().getFullYear()} EchoOps. All rights reserved.
             </div>
             <div className="flex space-x-6">
               <Link

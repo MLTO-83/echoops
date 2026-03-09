@@ -1,10 +1,10 @@
 [Unit]
-Description=Portavi AI Job Processor
+Description=EchoOps AI Job Processor
 After=network.target
 
 [Service]
 User=root
-WorkingDirectory=/var/www/portavi
+WorkingDirectory=/var/www/echoops
 ExecStart=/usr/bin/npm run process-ai-jobs
 Restart=always
 RestartSec=10

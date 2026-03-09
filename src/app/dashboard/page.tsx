@@ -39,12 +39,12 @@ export default function Dashboard() {
     if (session?.user?.email && !session.user.emailVerified) {
       // Check localStorage to see if we've shown the welcome modal before
       const hasShownWelcomeModal = localStorage.getItem(
-        `portavi-welcomed-${session.user.id}`
+        `echoops-welcomed-${session.user.id}`
       );
       if (!hasShownWelcomeModal) {
         setIsFirstLogin(true);
         // Mark that we've shown the welcome modal to this user
-        localStorage.setItem(`portavi-welcomed-${session.user.id}`, "true");
+        localStorage.setItem(`echoops-welcomed-${session.user.id}`, "true");
       }
     }
   }, [session]);
@@ -102,7 +102,7 @@ export default function Dashboard() {
             Welcome, {session?.user?.name || "User"}!
           </h2>
           <p className="text-gray-800 dark:text-white">
-            You are now signed in to Portavi. Manage your Azure DevOps projects
+            You are now signed in to EchoOps. Manage your Azure DevOps projects
             and track development progress.
           </p>
         </div>

@@ -284,7 +284,7 @@ export class AzureDevOpsIntegration {
 
       const initialContent = `# ${repositoryName}
 
-This repository was initialized automatically by Portavi AI.
+This repository was initialized automatically by EchoOps AI.
 
 ## Getting Started
 

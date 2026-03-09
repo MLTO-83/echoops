@@ -61,7 +61,7 @@ Since testing requires interaction with Azure DevOps repositories, follow these 
 1. Deploy the updated code using the `deploy-empty-repo-fix-updated.sh` script:
 
    ```bash
-   /root/portavi/scripts/deploy-empty-repo-fix-updated.sh
+   /root/echoops/scripts/deploy-empty-repo-fix-updated.sh
    ```
 
 2. Create an empty repository in Azure DevOps (without initialization)
@@ -69,13 +69,13 @@ Since testing requires interaction with Azure DevOps repositories, follow these 
 3. Run the test script:
 
    ```bash
-   node /var/www/portavi/scripts/test-empty-repo-initialization.js "YourEmptyRepoName"
+   node /var/www/echoops/scripts/test-empty-repo-initialization.js "YourEmptyRepoName"
    ```
 
 4. Monitor the logs to verify the expected flow:
 
    ```bash
-   tail -f /var/www/portavi/scripts/process-ai-jobs.log
+   tail -f /var/www/echoops/scripts/process-ai-jobs.log
    ```
 
 5. Verify in Azure DevOps that:
@@ -90,7 +90,7 @@ If issues arise, you can rollback to the previous version using the backup files
 
 ```bash
 # Replace TIMESTAMP with the actual timestamp from your backup files
-cp /var/www/portavi/scripts/process-ai-jobs.js.bak.TIMESTAMP /var/www/portavi/scripts/process-ai-jobs.js
-cp /var/www/portavi/scripts/process-ai-jobs.ts.bak.TIMESTAMP /var/www/portavi/scripts/process-ai-jobs.ts
+cp /var/www/echoops/scripts/process-ai-jobs.js.bak.TIMESTAMP /var/www/echoops/scripts/process-ai-jobs.js
+cp /var/www/echoops/scripts/process-ai-jobs.ts.bak.TIMESTAMP /var/www/echoops/scripts/process-ai-jobs.ts
 systemctl restart ai-job-processor.service
 ```

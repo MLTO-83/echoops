@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document explains how the Portavi application integrates with Azure DevOps (ADO) webhooks, with special emphasis on the test webhook handling.
+This document explains how the EchoOps application integrates with Azure DevOps (ADO) webhooks, with special emphasis on the test webhook handling.
 
 ## ADO Test Webhook Behavior
 
@@ -12,9 +12,9 @@ When setting up a webhook in Azure DevOps, ADO sends a test payload to verify th
 - It is sent as part of the webhook creation/verification process
 - It requires a 2xx response (typically 200 OK) to confirm the webhook is working
 
-## Special Handling in Portavi
+## Special Handling in EchoOps
 
-Portavi implements special handling for this test webhook payload:
+EchoOps implements special handling for this test webhook payload:
 
 1. When a payload with ID `27646e0e-b520-4d2b-9411-bba7524947cd` is detected, it is automatically accepted
 2. Signature validation is bypassed for this specific test payload
@@ -27,7 +27,7 @@ If you're experiencing issues with ADO webhook integration:
 
 1. Use the diagnostic endpoint at `/api/ado/webhook/diagnose` to verify payload format and signatures
 2. Check the webhook logs for any validation or processing errors
-3. Ensure your webhook secret is correctly configured both in ADO and in your Portavi project
+3. Ensure your webhook secret is correctly configured both in ADO and in your EchoOps project
 4. If testing locally, you can use the `bypass=true` URL parameter (not available in production)
 
 ## Related Files

@@ -8,9 +8,9 @@ export default function TestEmailPage() {
   const [emailResult, setEmailResult] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const [recipient, setRecipient] = useState<string>("");
-  const [subject, setSubject] = useState<string>("Test email from Portavi");
+  const [subject, setSubject] = useState<string>("Test email from EchoOps");
   const [message, setMessage] = useState<string>(
-    "This is a test email sent from the Portavi platform using Resend."
+    "This is a test email sent from the EchoOps platform using Resend."
   );
 
   // Send verification email to current user
@@ -51,9 +51,9 @@ export default function TestEmailPage() {
           to: recipient,
           subject,
           html: `<div style="font-family: Arial, sans-serif; padding: 20px;">
-            <h2>Hello from Portavi!</h2>
+            <h2>Hello from EchoOps!</h2>
             <p>${message}</p>
-            <p>Best regards,<br/>The Portavi Team</p>
+            <p>Best regards,<br/>The EchoOps Team</p>
           </div>`,
         }),
       });

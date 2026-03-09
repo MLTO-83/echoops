@@ -34,8 +34,8 @@ function SignInContent() {
         <div className="flex justify-center mb-6">
           <Link href="/">
             <Image
-              src="/Portavi logo.png"
-              alt="Portavi Logo"
+              src="/EchoOps logo.png"
+              alt="EchoOps Logo"
               width={160}
               height={53}
               priority
@@ -52,7 +52,7 @@ function SignInContent() {
           <div className="relative z-10 p-8 space-y-6">
             <div className="text-center">
               <h1 className="font-display text-3xl font-bold text-gray-900 dark:text-white">
-                Sign In to Portavi
+                Sign In to EchoOps
               </h1>
               <p className="mt-2 text-gray-700 dark:text-gray-300">
                 Access your projects and continue your work
@@ -126,7 +126,7 @@ function SignInContent() {
       <footer className="w-full max-w-md mt-auto pt-8">
         <div className="border-t border-border/30 py-4">
           <div className="text-center text-gray-500 dark:text-gray-400 text-sm">
-            © {new Date().getFullYear()} Portavi. All rights reserved.
+            © {new Date().getFullYear()} EchoOps. All rights reserved.
           </div>
         </div>
       </footer>

@@ -34,12 +34,12 @@
 
 2. Test with a repository name containing spaces:
    ```bash
-   cd /var/www/portavi && node scripts/test-repo-with-spaces.js
+   cd /var/www/echoops && node scripts/test-repo-with-spaces.js
    ```
 
 3. Monitor logs for successful API calls:
    ```bash
-   tail -f /var/www/portavi/scripts/process-ai-jobs.log
+   tail -f /var/www/echoops/scripts/process-ai-jobs.log
    ```
 
 4. Check for completed jobs in the database with repository names containing spaces.

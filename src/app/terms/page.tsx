@@ -53,8 +53,8 @@ export default function Terms() {
             </p>
 
             <p className="text-lg">
-              Welcome to Portavi. Please read these Terms of Service carefully
-              before using our platform. By accessing or using Portavi, you
+              Welcome to EchoOps. Please read these Terms of Service carefully
+              before using our platform. By accessing or using EchoOps, you
               agree to be bound by these Terms.
             </p>
 
@@ -63,7 +63,7 @@ export default function Terms() {
                 1. Acceptance of Terms
               </h2>
               <p>
-                By accessing or using the Portavi platform, website, and
+                By accessing or using the EchoOps platform, website, and
                 services (collectively, the "Services"), you agree to be bound
                 by these Terms of Service. If you do not agree to all of these
                 Terms, you may not access or use our Services.
@@ -94,7 +94,7 @@ export default function Terms() {
                 {[
                   "Provide accurate and complete information",
                   "Maintain the security of your account credentials",
-                  "Immediately notify Portavi of any unauthorized use of your account",
+                  "Immediately notify EchoOps of any unauthorized use of your account",
                   "Accept responsibility for all activities that occur under your account",
                 ].map((item, i) => (
                   <li className="flex items-start gap-3" key={i}>
@@ -209,7 +209,7 @@ export default function Terms() {
                 Our Services may integrate with third-party services and
                 applications. Your use of such integrations is subject to both
                 these Terms and any terms imposed by the third-party services.
-                Portavi is not responsible for the practices, policies, or
+                EchoOps is not responsible for the practices, policies, or
                 content of these third-party services.
               </p>
             </div>
@@ -221,13 +221,13 @@ export default function Terms() {
               <div className="space-y-4">
                 <div className="bg-background-secondary/30 dark:bg-background-secondary/20 p-4 rounded-md">
                   <h3 className="font-medium text-gray-900 dark:text-white mb-2">
-                    7.1 Portavi Content
+                    7.1 EchoOps Content
                   </h3>
                   <p>
-                    All content provided by Portavi, including but not limited
+                    All content provided by EchoOps, including but not limited
                     to text, graphics, logos, icons, images, audio clips,
-                    software, and other material ("Portavi Content"), is the
-                    property of Portavi or its licensors and is protected by
+                    software, and other material ("EchoOps Content"), is the
+                    property of EchoOps or its licensors and is protected by
                     copyright, trademark, and other intellectual property laws.
                   </p>
                 </div>
@@ -238,7 +238,7 @@ export default function Terms() {
                   <p>
                     You retain ownership of any content you upload to the
                     Services ("User Content"). By uploading User Content, you
-                    grant Portavi a worldwide, non-exclusive, royalty-free
+                    grant EchoOps a worldwide, non-exclusive, royalty-free
                     license to use, reproduce, modify, and display your User
                     Content solely for the purpose of providing the Services to
                     you.
@@ -252,12 +252,12 @@ export default function Terms() {
                 8. Limitation of Liability
               </h2>
               <p className="bg-background-secondary/30 dark:bg-background-secondary/20 p-4 rounded-md uppercase text-sm font-medium tracking-wider">
-                TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, PORTAVI, ITS
+                TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, ECHOOPS, ITS
                 AFFILIATES, AND THEIR RESPECTIVE OFFICERS, DIRECTORS, EMPLOYEES,
                 AND AGENTS SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL,
                 SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING LOSS OF
                 PROFITS, DATA, OR BUSINESS OPPORTUNITY, ARISING OUT OF OR IN
-                CONNECTION WITH THESE TERMS OR THE SERVICES, EVEN IF PORTAVI HAS
+                CONNECTION WITH THESE TERMS OR THE SERVICES, EVEN IF ECHOOPS HAS
                 BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
               </p>
             </div>
@@ -314,10 +314,10 @@ export default function Terms() {
                   </svg>
                   <span>Email: </span>
                   <a
-                    href="mailto:legal@portavi.eu"
+                    href="mailto:support@echoops.org"
                     className="text-primary hover:underline"
                   >
-                    legal@portavi.eu
+                    support@echoops.org
                   </a>
                 </div>
                 <div className="flex items-center gap-2 mb-2">
@@ -371,7 +371,7 @@ export default function Terms() {
         <div className="border-t border-border/30 py-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="text-gray-500 dark:text-gray-400 mb-4 md:mb-0">
-              © {new Date().getFullYear()} Portavi. All rights reserved.
+              © {new Date().getFullYear()} EchoOps. All rights reserved.
             </div>
             <div className="flex space-x-6">
               <Link

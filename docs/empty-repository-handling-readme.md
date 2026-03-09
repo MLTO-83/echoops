@@ -1,6 +1,6 @@
 # Empty Repository Handling Fix
 
-This feature enhances the Portavi AI Agent by automatically initializing empty Azure DevOps repositories when encountered during job processing.
+This feature enhances the EchoOps AI Agent by automatically initializing empty Azure DevOps repositories when encountered during job processing.
 
 ## Problem
 
@@ -18,9 +18,9 @@ We've implemented an automatic repository initialization capability that:
 ## Deployment Instructions
 
 1. Log in to the production server
-2. Navigate to the portavi directory:
+2. Navigate to the echoops directory:
    ```bash
-   cd /var/www/portavi
+   cd /var/www/echoops
    ```
 3. Run the deployment script:
    ```bash
@@ -39,11 +39,11 @@ Since this functionality requires actual interaction with Azure DevOps repositor
    - Important: Do NOT initialize it with a README.md file
 2. Run the test script with your empty repository name:
    ```bash
-   node /var/www/portavi/scripts/test-empty-repo-initialization.js "YourEmptyRepoName"
+   node /var/www/echoops/scripts/test-empty-repo-initialization.js "YourEmptyRepoName"
    ```
 3. Monitor the logs to see the initialization process:
    ```bash
-   tail -f /var/www/portavi/scripts/process-ai-jobs.log
+   tail -f /var/www/echoops/scripts/process-ai-jobs.log
    ```
 4. You should see log entries indicating:
 
@@ -66,8 +66,8 @@ If issues arise, you can rollback to the previous version:
 
    ```bash
    # Replace TIMESTAMP with the actual timestamp from the backup files
-   cp /var/www/portavi/scripts/process-ai-jobs.js.bak.TIMESTAMP /var/www/portavi/scripts/process-ai-jobs.js
-   cp /var/www/portavi/scripts/process-ai-jobs.ts.bak.TIMESTAMP /var/www/portavi/scripts/process-ai-jobs.ts
+   cp /var/www/echoops/scripts/process-ai-jobs.js.bak.TIMESTAMP /var/www/echoops/scripts/process-ai-jobs.js
+   cp /var/www/echoops/scripts/process-ai-jobs.ts.bak.TIMESTAMP /var/www/echoops/scripts/process-ai-jobs.ts
    ```
 
 2. Restart the service:

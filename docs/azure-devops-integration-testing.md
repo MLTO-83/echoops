@@ -26,7 +26,7 @@ This document provides instructions for testing the Azure DevOps integration fix
 Run the following command to create a test AI job with a specific repository name:
 
 ```bash
-node /root/portavi/scripts/test-repo-with-spaces.js "Repository Name With Spaces"
+node /root/echoops/scripts/test-repo-with-spaces.js "Repository Name With Spaces"
 ```
 
 Replace "Repository Name With Spaces" with the actual repository name you want to test. The script will:
@@ -40,7 +40,7 @@ Replace "Repository Name With Spaces" with the actual repository name you want t
 If you have existing failed jobs with spaces in repository names, you can reset them to be reprocessed:
 
 ```bash
-node /root/portavi/scripts/reset-failed-jobs-with-spaces.js
+node /root/echoops/scripts/reset-failed-jobs-with-spaces.js
 ```
 
 This will:
@@ -54,7 +54,7 @@ This will:
 Check the AI job processor logs for detailed information:
 
 ```bash
-tail -f /root/portavi/scripts/process-ai-jobs.log
+tail -f /root/echoops/scripts/process-ai-jobs.log
 ```
 
 ## Verification
@@ -71,14 +71,14 @@ A successful test will show:
 If the test fails, check:
 
 1. AI job processor service is running: `systemctl status ai-job-processor.service`
-2. The logs for specific errors: `tail -f /root/portavi/scripts/process-ai-jobs.log`
+2. The logs for specific errors: `tail -f /root/echoops/scripts/process-ai-jobs.log`
 3. Azure DevOps PAT token validity
 4. Repository and project existence in the ADO organization
 
 ## Deploying to Production
 
 1. Copy the updated `scripts/process-ai-jobs.ts` file to the production server
-2. Compile the TypeScript: `tsc /root/portavi/scripts/process-ai-jobs.ts`
+2. Compile the TypeScript: `tsc /root/echoops/scripts/process-ai-jobs.ts`
 3. Restart the AI job processor service: `systemctl restart ai-job-processor.service`
 4. Run a test job to verify the fixes are working
 

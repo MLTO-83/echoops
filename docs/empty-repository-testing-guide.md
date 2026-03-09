@@ -20,11 +20,11 @@ The fix addresses issues when creating pull requests in Azure DevOps repositorie
 
 ### Test Process
 
-1. SSH into the Portavi server
+1. SSH into the EchoOps server
 2. Run the test script with your empty repository name:
 
    ```bash
-   /root/portavi/scripts/test-empty-repo-fix.sh "YourEmptyRepoName"
+   /root/echoops/scripts/test-empty-repo-fix.sh "YourEmptyRepoName"
    ```
 
 3. The script will:
@@ -35,7 +35,7 @@ The fix addresses issues when creating pull requests in Azure DevOps repositorie
 
 4. Monitor the process by viewing the logs:
    ```bash
-   tail -f /root/portavi/scripts/process-ai-jobs.log
+   tail -f /root/echoops/scripts/process-ai-jobs.log
    ```
 
 ### Expected Results

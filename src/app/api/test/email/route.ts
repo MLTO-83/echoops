@@ -21,7 +21,7 @@ const transporter = nodemailer.createTransport({
 function generateVerificationToken(email: string): string {
   // Create a hash using the email and a secret
   const secret =
-    process.env.EMAIL_SECRET || "portavi-email-verification-secret";
+    process.env.EMAIL_SECRET || "echoops-email-verification-secret";
   const timestamp = Date.now().toString();
   return createHash("sha256")
     .update(`${email}-${timestamp}-${secret}`)
@@ -55,12 +55,12 @@ export async function POST(req: NextRequest) {
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: email,
-      subject: "Portavi User Validation (Test)",
+      subject: "EchoOps User Validation (Test)",
       text: `Please verify your email by clicking on the following link: ${verificationUrl}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2>Verify Your Email Address</h2>
-          <p>This is a test email from Portavi. If you received this, it means the email sending functionality is working!</p>
+          <p>This is a test email from EchoOps. If you received this, it means the email sending functionality is working!</p>
           <p>You would normally verify your email by clicking the button below:</p>
           <a 
             href="${verificationUrl}" 

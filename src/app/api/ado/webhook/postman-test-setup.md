@@ -3,7 +3,7 @@
 ## Basic Setup
 
 1. Create a new POST request in Postman
-2. URL: https://portavi.eu/api/ado/webhook
+2. URL: https://echoops.org/api/ado/webhook
 3. Headers:
    - Content-Type: application/json; charset=utf-8
    - x-ado-signature: (Generate using pre-request script below)
@@ -184,13 +184,13 @@ pm.request.headers.upsert({
 }
 ```
 
-> **Important Note**: Replace `"YourProjectName"` in the `System.TeamProject` field with an actual project name that exists in your Portavi database. This is crucial for successfully processing the webhook.
+> **Important Note**: Replace `"YourProjectName"` in the `System.TeamProject` field with an actual project name that exists in your EchoOps database. This is crucial for successfully processing the webhook.
 
 ## Customizing for Your Environment
 
 When testing with this payload, make these modifications to ensure it works with your setup:
 
-1. Change `"System.TeamProject"` to match a project name in your Portavi database
+1. Change `"System.TeamProject"` to match a project name in your EchoOps database
 2. Set `"System.AssignedTo"` to have the display name `"Freja"` (as shown in the example)
 3. Update the `"System.Description"` field if you want to test specific content
 4. The test will work best if the `"id"` value is kept as `"27646e0e-b520-4d2b-9411-bba7524947cd"` since our code has special handling for this test ID

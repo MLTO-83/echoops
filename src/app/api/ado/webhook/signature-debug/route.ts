@@ -181,7 +181,7 @@ export async function POST(request: NextRequest) {
         : !matchesSha1 && !matchesSha256 && !matchesSha256WithoutPrefix
           ? [
               "The signature doesn't match any supported format.",
-              "Verify the webhook secret matches between Azure DevOps and your Portavi project settings.",
+              "Verify the webhook secret matches between Azure DevOps and your EchoOps project settings.",
               "Try copying and pasting the secret again to avoid hidden characters.",
             ]
           : [

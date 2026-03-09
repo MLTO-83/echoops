@@ -645,7 +645,7 @@ export default function ProjectDetailsPage() {
             </span>
           </h1>
           <p className="text-gray-700 dark:text-white mb-4">
-            Ensuring project data is up-to-date between Azure DevOps and Portavi
+            Ensuring project data is up-to-date between Azure DevOps and EchoOps
           </p>
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto"></div>
         </div>

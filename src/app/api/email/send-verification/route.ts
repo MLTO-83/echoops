@@ -17,7 +17,7 @@ const resend = new Resend(resendApiKey);
 function generateVerificationToken(email: string): string {
   // Create a hash using the email and a secret
   const secret =
-    process.env.EMAIL_SECRET || "portavi-email-verification-secret";
+    process.env.EMAIL_SECRET || "echoops-email-verification-secret";
   const timestamp = Date.now().toString();
   return createHash("sha256")
     .update(`${email}-${timestamp}-${secret}`)
@@ -71,42 +71,42 @@ export async function POST(req: NextRequest) {
 
     // Send the email using Resend
     const { data, error } = await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL || "onboarding@update.portavi.eu",
+      from: process.env.RESEND_FROM_EMAIL || "onboarding@update.echoops.org",
       to: email,
-      subject: "Verify Your Email Address - Portavi",
+      subject: "Verify Your Email Address - EchoOps",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
           <p>Hi ${firstName},</p>
 
-          <p>Thanks for signing up with Portavi! To complete your registration and activate your account, please verify your email address by clicking the link below:</p>
+          <p>Thanks for signing up with EchoOps! To complete your registration and activate your account, please verify your email address by clicking the link below:</p>
 
           <p style="margin: 20px 0;">
             <a href="${verificationUrl}" style="background-color: #4A90E2; color: white; padding: 10px 20px; text-align: center; text-decoration: none; display: inline-block; border-radius: 4px;">Verify Email Address</a>
           </p>
 
-          <p>This link will expire in 60 minutes. Once you've clicked it, you'll be fully validated and able to access all areas of your Portavi dashboard.</p>
+          <p>This link will expire in 60 minutes. Once you've clicked it, you'll be fully validated and able to access all areas of your EchoOps dashboard.</p>
 
-          <p>If you didn't create a Portavi account, you can safely ignore this message.</p>
+          <p>If you didn't create a EchoOps account, you can safely ignore this message.</p>
 
           <p>Welcome aboard!</p>
 
-          <p>--- The Portavi Team</p>
+          <p>--- The EchoOps Team</p>
         </div>
       `,
       text: `
 Hi ${firstName},
 
-Thanks for signing up with Portavi! To complete your registration and activate your account, please verify your email address by clicking the link below:
+Thanks for signing up with EchoOps! To complete your registration and activate your account, please verify your email address by clicking the link below:
 
 ${verificationUrl}
 
-This link will expire in 60 minutes. Once you've clicked it, you'll be fully validated and able to access all areas of your Portavi dashboard.
+This link will expire in 60 minutes. Once you've clicked it, you'll be fully validated and able to access all areas of your EchoOps dashboard.
 
-If you didn't create a Portavi account, you can safely ignore this message.
+If you didn't create a EchoOps account, you can safely ignore this message.
 
 Welcome aboard!
 
---- The Portavi Team
+--- The EchoOps Team
       `,
     });
 

@@ -13,7 +13,7 @@ export default function HowTo() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative">
           <div className="space-y-1">
             <h1 className="font-display text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white tracking-tight">
-              How To Use Portavi
+              How To Use EchoOps
             </h1>
             <p className="text-gray-700 dark:text-white">
               A guide to getting started with our platform
@@ -49,7 +49,7 @@ export default function HowTo() {
 
           <div className="prose prose-lg max-w-none relative z-10 text-gray-700 dark:text-white">
             <p className="text-lg">
-              Welcome to Portavi! This guide will help you get started and make
+              Welcome to EchoOps! This guide will help you get started and make
               the most of our project management platform.
             </p>
 
@@ -63,13 +63,13 @@ export default function HowTo() {
                   1. Create Your Account
                 </h3>
                 <p className="mb-3">
-                  Begin by signing up for a Portavi account. You&apos;ll need to
+                  Begin by signing up for a EchoOps account. You&apos;ll need to
                   provide your email address and create a password.
                 </p>
                 <div className="bg-primary/10 dark:bg-primary/20 p-4 rounded-lg">
                   <p className="text-sm text-gray-900 dark:text-white">
                     <strong>Pro Tip:</strong> If your organization already uses
-                    Portavi, ask your administrator for an invitation link to
+                    EchoOps, ask your administrator for an invitation link to
                     join your team directly.
                   </p>
                 </div>
@@ -116,7 +116,7 @@ export default function HowTo() {
                   3. Connect Your Services
                 </h3>
                 <p className="mb-3">
-                  Portavi works best when connected to your development
+                  EchoOps works best when connected to your development
                   services. Set up integrations with:
                 </p>
                 <div className="grid grid-cols-2 gap-3">
@@ -224,7 +224,7 @@ export default function HowTo() {
                     Reporting
                   </h3>
                   <p className="mb-3">
-                    Portavi provides detailed reporting features to help track
+                    EchoOps provides detailed reporting features to help track
                     project progress and team performance.
                   </p>
                   <ul className="list-none pl-0 space-y-2">
@@ -343,7 +343,7 @@ export default function HowTo() {
                     </svg>
                     <span>
                       Contact support at{" "}
-                      <span className="text-primary">support@portavi.com</span>
+                      <span className="text-primary">support@echoops.org</span>
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
@@ -374,7 +374,7 @@ export default function HowTo() {
                 href="/auth/signin"
                 className="button-primary inline-flex items-center group"
               >
-                <span>Get Started with Portavi</span>
+                <span>Get Started with EchoOps</span>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="h-5 w-5 ml-2 transform group-hover:translate-x-1 transition-transform"
@@ -400,7 +400,7 @@ export default function HowTo() {
         <div className="border-t border-border/30 py-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="text-gray-500 dark:text-gray-400 mb-4 md:mb-0">
-              © {new Date().getFullYear()} Portavi. All rights reserved.
+              © {new Date().getFullYear()} EchoOps. All rights reserved.
             </div>
             <div className="flex space-x-6">
               <Link

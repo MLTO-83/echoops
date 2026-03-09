@@ -357,7 +357,7 @@ When a branch already exists (409 conflict), we now:
 1. Compile the TypeScript to JavaScript:
 
    ```bash
-   cd /root/portavi && npx tsc --skipLibCheck
+   cd /root/echoops && npx tsc --skipLibCheck
    ```
 
 2. Restart the AI job processor service:
@@ -376,7 +376,7 @@ When a branch already exists (409 conflict), we now:
 If issues are encountered, restore the previous version:
 
 ```bash
-cd /root/portavi
+cd /root/echoops
 git checkout -- scripts/process-ai-jobs.ts
 npx tsc --skipLibCheck
 sudo systemctl restart ai-job-processor.service
@@ -384,6 +384,6 @@ sudo systemctl restart ai-job-processor.service
 
 ## Related Documentation
 
-- [Original Empty Repository Handling](/root/portavi/docs/empty-repository-handling.md)
-- [Empty Repository PR Flow Fix](/root/portavi/docs/empty-repository-pr-flow-fix.md)
-- [Repository Name Mismatch Fix](/root/portavi/docs/repository-name-mismatch-fix.md)
+- [Original Empty Repository Handling](/root/echoops/docs/empty-repository-handling.md)
+- [Empty Repository PR Flow Fix](/root/echoops/docs/empty-repository-pr-flow-fix.md)
+- [Repository Name Mismatch Fix](/root/echoops/docs/repository-name-mismatch-fix.md)

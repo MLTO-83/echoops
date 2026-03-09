@@ -53,7 +53,7 @@ export default function Privacy() {
             </p>
 
             <p className="text-lg">
-              At Portavi, we take your privacy seriously. This Privacy Policy
+              At EchoOps, we take your privacy seriously. This Privacy Policy
               explains how we collect, use, disclose, and safeguard your
               information when you use our platform.
             </p>
@@ -190,9 +190,9 @@ export default function Privacy() {
               </h2>
               <div className="card-neo p-6">
                 <p className="mb-4">
-                  Portavi integrates with third-party services such as Azure
+                  EchoOps integrates with third-party services such as Azure
                   DevOps, GitHub, and other development tools. When you connect
-                  these services to your Portavi account:
+                  these services to your EchoOps account:
                 </p>
                 <ul className="list-none pl-0 space-y-2">
                   {[
@@ -330,7 +330,7 @@ export default function Privacy() {
                 </div>
                 <p>
                   To exercise these rights, please contact us at{" "}
-                  <span className="text-primary">privacy@portavi.com</span>.
+                  <span className="text-primary">support@echoops.org</span>.
                 </p>
               </div>
             </div>
@@ -384,10 +384,10 @@ export default function Privacy() {
                     </svg>
                     <span>Email: </span>
                     <a
-                      href="mailto:legal@portavi.eu"
+                      href="mailto:support@echoops.org"
                       className="text-primary hover:underline"
                     >
-                      legal@portavi.eu
+                      support@echoops.org
                     </a>
                   </div>
                   <div className="flex items-center gap-2 mb-2">
@@ -442,7 +442,7 @@ export default function Privacy() {
         <div className="border-t border-border/30 py-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="text-gray-500 dark:text-gray-400 mb-4 md:mb-0">
-              © {new Date().getFullYear()} Portavi. All rights reserved.
+              © {new Date().getFullYear()} EchoOps. All rights reserved.
             </div>
             <div className="flex space-x-6">
               <Link

@@ -17,14 +17,14 @@ The current implementation of Azure DevOps integration in the AI job processor h
 2. Pull the changes on the production server:
 
 ```bash
-cd /var/www/portavi
-GIT_SSH_COMMAND='ssh -i ~/.ssh/portavi_ed25519 -o IdentitiesOnly=yes' git pull origin main
+cd /var/www/echoops
+GIT_SSH_COMMAND='ssh -i ~/.ssh/echoops_ed25519 -o IdentitiesOnly=yes' git pull origin main
 ```
 
 3. Compile the TypeScript file:
 
 ```bash
-cd /var/www/portavi
+cd /var/www/echoops
 npx tsc scripts/process-ai-jobs.ts
 ```
 
@@ -41,7 +41,7 @@ If you prefer to implement the fix manually on the production server:
 1. Replace the current implementation with the fixed version:
 
 ```bash
-cd /var/www/portavi
+cd /var/www/echoops
 cp scripts/process-ai-jobs-fixed-api-flow.js scripts/process-ai-jobs.js
 ```
 
@@ -58,7 +58,7 @@ systemctl restart ai-job-processor.service
 1. Create a test job with a repository name containing spaces:
 
 ```bash
-cd /var/www/portavi
+cd /var/www/echoops
 node scripts/test-repo-with-spaces.js "Repository With Spaces"
 ```
 
@@ -71,7 +71,7 @@ tail -f scripts/process-ai-jobs.log
 3. Reset failed jobs if needed:
 
 ```bash
-cd /var/www/portavi
+cd /var/www/echoops
 node scripts/reset-failed-jobs-with-spaces.js
 ```
 

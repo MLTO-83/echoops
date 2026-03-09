@@ -77,7 +77,7 @@ To fix the issue, modify your `process-ai-jobs.ts` file to use the new repositor
 
 4. After deployment, test with:
    ```bash
-   cd /var/www/portavi
+   cd /var/www/echoops
    node scripts/test-repo-with-spaces.js "MasterData"
    ```
 

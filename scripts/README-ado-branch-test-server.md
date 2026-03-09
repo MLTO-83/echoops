@@ -30,7 +30,7 @@ Your Personal Access Token needs these permissions:
 ### 1. Start the Server
 
 ```bash
-cd /root/portavi/scripts
+cd /root/echoops/scripts
 node test-ado-branch-creation-server.js
 ```
 

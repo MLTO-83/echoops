@@ -1,6 +1,6 @@
 # Azure DevOps Integration Fix
 
-This fix addresses several issues with Azure DevOps integration in the Portavi application:
+This fix addresses several issues with Azure DevOps integration in the EchoOps application:
 
 1. Repository names with spaces weren't being properly URL-encoded, causing API calls to fail
 2. Project name wasn't being specified in API calls
@@ -44,26 +44,26 @@ The code in `scripts/process-ai-jobs.ts` is now production-ready with the follow
 
 ```bash
 # Compile the TypeScript code first
-tsc /root/portavi/scripts/process-ai-jobs.ts
+tsc /root/echoops/scripts/process-ai-jobs.ts
 
 # Run the test script with a custom repository name
-node /root/portavi/scripts/test-repo-with-spaces.js "Your Repository With Spaces"
+node /root/echoops/scripts/test-repo-with-spaces.js "Your Repository With Spaces"
 ```
 
 ### 2. Reset and retry failed jobs
 
 ```bash
 # Reset all failed jobs with spaces in repository names
-node /root/portavi/scripts/reset-failed-jobs-with-spaces.js
+node /root/echoops/scripts/reset-failed-jobs-with-spaces.js
 
 # Reset a specific job by ID
-node /root/portavi/scripts/reset-failed-jobs-with-spaces.js YOUR_JOB_ID
+node /root/echoops/scripts/reset-failed-jobs-with-spaces.js YOUR_JOB_ID
 ```
 
 ### 3. Monitor logs
 
 ```bash
-tail -f /root/portavi/scripts/process-ai-jobs.log
+tail -f /root/echoops/scripts/process-ai-jobs.log
 ```
 
 ## Deploying to Production
@@ -71,7 +71,7 @@ tail -f /root/portavi/scripts/process-ai-jobs.log
 1. **Compile the TypeScript code**:
 
    ```bash
-   tsc /root/portavi/scripts/process-ai-jobs.ts
+   tsc /root/echoops/scripts/process-ai-jobs.ts
    ```
 
 2. **Restart the job processor service**:

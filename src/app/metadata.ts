@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 
 export const metadata: Metadata = {
-  title: "Portavi",
+  title: "EchoOps",
   description: "Azure DevOps integration platform",
   manifest: "/favicon/manifest.json",
   icons: {

@@ -2,30 +2,30 @@
 
 ## Overview
 
-This document describes the implementation of the fix for handling repository name mismatches between Azure DevOps (ADO) and the Portavi system.
+This document describes the implementation of the fix for handling repository name mismatches between Azure DevOps (ADO) and the EchoOps system.
 
 ## Implementation Details
 
 ### Files Modified
 
-1. `/root/portavi/scripts/process-ai-jobs.js`
+1. `/root/echoops/scripts/process-ai-jobs.js`
    - Added the repository matcher utility import
    - Replaced the direct repository lookup with the matcher function
    - Updated all API calls to use the matched repository name
 
 ### Files Created/Used
 
-1. `/root/portavi/scripts/ado-repository-matcher.js`
+1. `/root/echoops/scripts/ado-repository-matcher.js`
 
    - Contains the core repository matching logic
    - Tries multiple fallback approaches to find the correct repository
 
-2. `/root/portavi/scripts/test-repository-matcher.js`
+2. `/root/echoops/scripts/test-repository-matcher.js`
 
    - Test script to verify the repository matcher functionality
    - Includes multiple test cases for different matching scenarios
 
-3. `/root/portavi/scripts/deploy-repository-name-fix-v2.sh`
+3. `/root/echoops/scripts/deploy-repository-name-fix-v2.sh`
    - Deployment script for the repository name mismatch fix
 
 ## How It Works
@@ -67,7 +67,7 @@ All subsequent API calls now use `actualEncodedRepoName` instead of `encodedRepo
 To test the implementation, run:
 
 ```bash
-node /root/portavi/scripts/test-repository-matcher.js
+node /root/echoops/scripts/test-repository-matcher.js
 ```
 
 This will validate the repository matcher utility with various test cases.
@@ -77,7 +77,7 @@ This will validate the repository matcher utility with various test cases.
 To deploy the fix, run:
 
 ```bash
-/root/portavi/scripts/deploy-repository-name-fix-v2.sh
+/root/echoops/scripts/deploy-repository-name-fix-v2.sh
 ```
 
 ## Rollback
@@ -85,7 +85,7 @@ To deploy the fix, run:
 If needed, you can restore the backup file created during deployment:
 
 ```bash
-cp /root/portavi/scripts/process-ai-jobs.js.bak-TIMESTAMP /root/portavi/scripts/process-ai-jobs.js
+cp /root/echoops/scripts/process-ai-jobs.js.bak-TIMESTAMP /root/echoops/scripts/process-ai-jobs.js
 ```
 
 Replace `TIMESTAMP` with the appropriate backup timestamp.

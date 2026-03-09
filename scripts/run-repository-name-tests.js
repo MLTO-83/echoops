@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// filepath: /root/portavi/scripts/run-repository-name-tests.js
+// filepath: scripts/run-repository-name-tests.js
 /**
  * Automated test runner for repository name flow scenarios
  *

@@ -125,5 +125,5 @@ This makes it easy to identify which step fails and why.
 ---
 
 **Deployment Date**: May 30, 2025  
-**Main File**: `/root/portavi/scripts/process-ai-jobs.js`  
+**Main File**: `/root/echoops/scripts/process-ai-jobs.js`  
 **Status**: Ready for production deployment

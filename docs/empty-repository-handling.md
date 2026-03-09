@@ -14,7 +14,7 @@ The original code assumes that at least one of the standard branch names exists 
 
 A new script has been created to handle empty repositories:
 
-1. **Script Location**: `/root/portavi/scripts/handle-empty-repos.js`
+1. **Script Location**: `/root/echoops/scripts/handle-empty-repos.js`
 
 2. **Purpose**: This script:
 
@@ -68,7 +68,7 @@ After running the script, you should:
 1. Monitor the job processor logs:
 
    ```bash
-   tail -f /root/portavi/scripts/process-ai-jobs.log
+   tail -f /root/echoops/scripts/process-ai-jobs.log
    ```
 
 2. Verify that the job is picked up and processed successfully

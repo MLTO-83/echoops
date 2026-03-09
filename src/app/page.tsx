@@ -14,8 +14,8 @@ export default function Home() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative">
           <div className="flex items-center">
             <Image
-              src="/Portavi logo.png"
-              alt="Portavi Logo"
+              src="/EchoOps logo.png"
+              alt="EchoOps Logo"
               width={180}
               height={60}
               priority
@@ -24,7 +24,7 @@ export default function Home() {
             />
             <div className="ml-4 hidden md:block">
               <h1 className="text-xl font-display font-bold text-primary">
-                Portavi. AI-Powered Product Building.
+                EchoOps. AI-Powered Product Building.
               </h1>
             </div>
           </div>
@@ -47,7 +47,7 @@ export default function Home() {
         {/* For mobile display - show tagline below the logo */}
         <div className="md:hidden -mt-4 mb-2">
           <h1 className="text-xl font-display font-bold text-primary">
-            Portavi. AI-Powered Product Building.
+            EchoOps. AI-Powered Product Building.
           </h1>
         </div>
 
@@ -62,7 +62,7 @@ export default function Home() {
                 <span className="text-primary">Product Builders</span>
               </h2>
               <p className="mt-6 text-xl text-gray-700 dark:text-white">
-                Portavi empowers Project Managers to become strategic Product
+                EchoOps empowers Project Managers to become strategic Product
                 Builders through AI-driven insights. Seamlessly integrate with
                 Azure DevOps, leverage multi-AI capabilities, and transform
                 project data into actionable product strategies that drive
@@ -128,7 +128,7 @@ export default function Home() {
         <div className="border-t border-border/30 py-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="text-gray-500 dark:text-gray-400 mb-4 md:mb-0">
-              © {new Date().getFullYear()} Portavi. All rights reserved.
+              © {new Date().getFullYear()} EchoOps. All rights reserved.
             </div>
             <div className="flex space-x-6">
               <Link

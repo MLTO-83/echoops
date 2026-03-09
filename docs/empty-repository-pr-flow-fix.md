@@ -75,7 +75,7 @@ To verify the fix:
 1. Deploy using the new deployment script:
 
    ```bash
-   /root/portavi/scripts/deploy-empty-repo-fix-flow-updated.sh
+   /root/echoops/scripts/deploy-empty-repo-fix-flow-updated.sh
    ```
 
 2. Create an empty repository in Azure DevOps
@@ -83,12 +83,12 @@ To verify the fix:
 3. Run the test script:
 
    ```bash
-   node /var/www/portavi/scripts/test-empty-repo-initialization.js "YourEmptyRepoName"
+   node /var/www/echoops/scripts/test-empty-repo-initialization.js "YourEmptyRepoName"
    ```
 
 4. Monitor the logs to verify proper flow:
    ```bash
-   tail -f /var/www/portavi/scripts/process-ai-jobs.log
+   tail -f /var/www/echoops/scripts/process-ai-jobs.log
    ```
 
 ## Expected Behavior
@@ -109,7 +109,7 @@ If issues occur with the fix, you can roll back using:
 
 ```bash
 # Replace TIMESTAMP with the actual timestamp from your backups
-cp /var/www/portavi/scripts/process-ai-jobs.js.bak.TIMESTAMP /var/www/portavi/scripts/process-ai-jobs.js
-cp /var/www/portavi/scripts/process-ai-jobs.ts.bak.TIMESTAMP /var/www/portavi/scripts/process-ai-jobs.ts
+cp /var/www/echoops/scripts/process-ai-jobs.js.bak.TIMESTAMP /var/www/echoops/scripts/process-ai-jobs.js
+cp /var/www/echoops/scripts/process-ai-jobs.ts.bak.TIMESTAMP /var/www/echoops/scripts/process-ai-jobs.ts
 systemctl restart ai-job-processor.service
 ```

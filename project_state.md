@@ -29,26 +29,8 @@ As a user, I want to be able to select a project status from a predefined list s
 | `on_hold`       | On Hold          | The project is temporarily paused.                                                 |
 | `cancelled`     | Cancelled        | The project has been stopped before completion.                                    |
 
-## Prisma Data Model
+## Data Model (Firestore)
 
-```prisma
-model Project {
-  id        String   @id @default(cuid())
-  name      String
-  // other fields...
+Projects are stored in the `projects` collection with a `stateId` field (default: `"new"`).
 
-  stateId   String   @default("new")
-  state     State    @relation(fields: [stateId], references: [id], onDelete: Restrict)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model State {
-  id          String   @id            // e.g. "new", "approved", etc.
-  name        String   @unique        // Display name shown in UI
-  description String?
-
-  projects    Project[]
-}
-```
+States are stored in the `states` collection with fields: `id`, `name`, `description`.

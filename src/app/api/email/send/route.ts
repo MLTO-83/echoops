@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
 
     // Prepare email data
     const emailData = {
-      from: process.env.RESEND_FROM_EMAIL || "onboarding@update.portavi.eu",
+      from: process.env.RESEND_FROM_EMAIL || "onboarding@update.echoops.org",
       to,
       subject,
       ...(text && { text }),

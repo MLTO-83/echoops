@@ -21,7 +21,7 @@ if (args.length < 3) {
     "Usage: node test-webhook.js <webhook-url> <webhook-secret> <payload-file>"
   );
   console.error(
-    "Example: node test-webhook.js https://portavi.eu/api/ado/webhook your-secret-key ./sample-webhook-payload.json"
+    "Example: node test-webhook.js https://echoops.org/api/ado/webhook your-secret-key ./sample-webhook-payload.json"
   );
   console.error(
     "Options: --use-url-secret: Add the secret to the URL as a query parameter instead of using it for signature generation"

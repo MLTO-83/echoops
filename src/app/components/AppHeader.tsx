@@ -23,7 +23,7 @@ export default function AppHeader() {
         {/* Left side - Brand */}
         <div className="flex-none">
           <Link href="/dashboard" className="flex items-center gap-2">
-            <span className="font-bold text-lg">Portavi</span>
+            <span className="font-bold text-lg">EchoOps</span>
           </Link>
         </div>
 
