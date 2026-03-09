@@ -1,0 +1,314 @@
+{
+  "emptyTables": [
+    "ADOSprint",
+    "ADOWorkItem",
+    "AIAgentJob",
+    "AIAgentSettings",
+    "AIProviderSettings",
+    "Authenticator",
+    "ProgramType",
+    "ProjectMember",
+    "ProjectMemberWeeklyHours",
+    "ProjectProgramType",
+    "VerificationToken"
+  ],
+  "tablesWithoutIndexes": [
+    "AIAgentJob",
+    "AIAgentSettings",
+    "Organization",
+    "Project",
+    "ProjectProgramType"
+  ],
+  "unusedFields": [],
+  "nullValueFields": {
+    "Account": [
+      "refresh_token",
+      "expires_at",
+      "id_token",
+      "session_state"
+    ],
+    "User": [
+      "emailVerified"
+    ]
+  },
+  "missingRelationIndexes": [
+    {
+      "table": "User",
+      "column": "organizationId",
+      "referencedTable": "Organization",
+      "referencedColumn": "id"
+    },
+    {
+      "table": "Account",
+      "column": "userId",
+      "referencedTable": "User",
+      "referencedColumn": "id"
+    },
+    {
+      "table": "Session",
+      "column": "userId",
+      "referencedTable": "User",
+      "referencedColumn": "id"
+    },
+    {
+      "table": "Authenticator",
+      "column": "userId",
+      "referencedTable": "User",
+      "referencedColumn": "id"
+    },
+    {
+      "table": "Project",
+      "column": "adoConnectionId",
+      "referencedTable": "ADOConnection",
+      "referencedColumn": "id"
+    },
+    {
+      "table": "AIAgentSettings",
+      "column": "userId",
+      "referencedTable": "User",
+      "referencedColumn": "id"
+    },
+    {
+      "table": "AIAgentJob",
+      "column": "projectId",
+      "referencedTable": "Project",
+      "referencedColumn": "id"
+    }
+  ],
+  "redundantIndexes": [],
+  "incompleteRelations": [],
+  "databaseSize": {
+    "ADOConnection": {
+      "rowCount": 1,
+      "size": "48 kB",
+      "bytes": 49152
+    },
+    "ADOSprint": {
+      "rowCount": 0,
+      "size": "24 kB",
+      "bytes": 24576
+    },
+    "ADOWorkItem": {
+      "rowCount": 0,
+      "size": "24 kB",
+      "bytes": 24576
+    },
+    "AIAgentJob": {
+      "rowCount": 0,
+      "size": "16 kB",
+      "bytes": 16384
+    },
+    "AIAgentSettings": {
+      "rowCount": 0,
+      "size": "16 kB",
+      "bytes": 16384
+    },
+    "AIProviderSettings": {
+      "rowCount": 0,
+      "size": "24 kB",
+      "bytes": 24576
+    },
+    "Account": {
+      "rowCount": 1,
+      "size": "48 kB",
+      "bytes": 49152
+    },
+    "Authenticator": {
+      "rowCount": 0,
+      "size": "24 kB",
+      "bytes": 24576
+    },
+    "Organization": {
+      "rowCount": 1,
+      "size": "32 kB",
+      "bytes": 32768
+    },
+    "ProgramType": {
+      "rowCount": 0,
+      "size": "24 kB",
+      "bytes": 24576
+    },
+    "Project": {
+      "rowCount": 10,
+      "size": "56 kB",
+      "bytes": 57344
+    },
+    "ProjectMember": {
+      "rowCount": 0,
+      "size": "24 kB",
+      "bytes": 24576
+    },
+    "ProjectMemberWeeklyHours": {
+      "rowCount": 0,
+      "size": "40 kB",
+      "bytes": 40960
+    },
+    "ProjectProgramType": {
+      "rowCount": 0,
+      "size": "16 kB",
+      "bytes": 16384
+    },
+    "Session": {
+      "rowCount": 1,
+      "size": "48 kB",
+      "bytes": 49152
+    },
+    "User": {
+      "rowCount": 6,
+      "size": "64 kB",
+      "bytes": 65536
+    },
+    "VerificationToken": {
+      "rowCount": 0,
+      "size": "24 kB",
+      "bytes": 24576
+    },
+    "_prisma_migrations": {
+      "rowCount": 8,
+      "size": "32 kB",
+      "bytes": 32768
+    }
+  },
+  "recommendations": [
+    {
+      "type": "ADD_INDEX",
+      "priority": "HIGH",
+      "description": "Add index to foreign key column \"organizationId\" in table \"User\"",
+      "details": "This column references Organization.id",
+      "sql": "CREATE INDEX IF NOT EXISTS \"idx_User_organizationId\" ON \"User\"(\"organizationId\");"
+    },
+    {
+      "type": "ADD_INDEX",
+      "priority": "HIGH",
+      "description": "Add index to foreign key column \"userId\" in table \"Account\"",
+      "details": "This column references User.id",
+      "sql": "CREATE INDEX IF NOT EXISTS \"idx_Account_userId\" ON \"Account\"(\"userId\");"
+    },
+    {
+      "type": "ADD_INDEX",
+      "priority": "HIGH",
+      "description": "Add index to foreign key column \"userId\" in table \"Session\"",
+      "details": "This column references User.id",
+      "sql": "CREATE INDEX IF NOT EXISTS \"idx_Session_userId\" ON \"Session\"(\"userId\");"
+    },
+    {
+      "type": "ADD_INDEX",
+      "priority": "HIGH",
+      "description": "Add index to foreign key column \"userId\" in table \"Authenticator\"",
+      "details": "This column references User.id",
+      "sql": "CREATE INDEX IF NOT EXISTS \"idx_Authenticator_userId\" ON \"Authenticator\"(\"userId\");"
+    },
+    {
+      "type": "ADD_INDEX",
+      "priority": "HIGH",
+      "description": "Add index to foreign key column \"adoConnectionId\" in table \"Project\"",
+      "details": "This column references ADOConnection.id",
+      "sql": "CREATE INDEX IF NOT EXISTS \"idx_Project_adoConnectionId\" ON \"Project\"(\"adoConnectionId\");"
+    },
+    {
+      "type": "ADD_INDEX",
+      "priority": "HIGH",
+      "description": "Add index to foreign key column \"userId\" in table \"AIAgentSettings\"",
+      "details": "This column references User.id",
+      "sql": "CREATE INDEX IF NOT EXISTS \"idx_AIAgentSettings_userId\" ON \"AIAgentSettings\"(\"userId\");"
+    },
+    {
+      "type": "ADD_INDEX",
+      "priority": "HIGH",
+      "description": "Add index to foreign key column \"projectId\" in table \"AIAgentJob\"",
+      "details": "This column references Project.id",
+      "sql": "CREATE INDEX IF NOT EXISTS \"idx_AIAgentJob_projectId\" ON \"AIAgentJob\"(\"projectId\");"
+    },
+    {
+      "type": "REVIEW_UNUSED_FIELDS",
+      "priority": "MEDIUM",
+      "description": "Review unused fields in table \"Account\"",
+      "details": "The following columns contain only NULL values: refresh_token, expires_at, id_token, session_state",
+      "schema": "Consider removing these fields or adding default values if they're needed"
+    },
+    {
+      "type": "REVIEW_UNUSED_FIELDS",
+      "priority": "MEDIUM",
+      "description": "Review unused fields in table \"User\"",
+      "details": "The following columns contain only NULL values: emailVerified",
+      "schema": "Consider removing these fields or adding default values if they're needed"
+    },
+    {
+      "type": "REVIEW_EMPTY_TABLE",
+      "priority": "LOW",
+      "description": "Review empty table \"ADOSprint\"",
+      "details": "This table exists but contains no data",
+      "schema": "Consider if this table is needed or if it should be populated"
+    },
+    {
+      "type": "REVIEW_EMPTY_TABLE",
+      "priority": "LOW",
+      "description": "Review empty table \"ADOWorkItem\"",
+      "details": "This table exists but contains no data",
+      "schema": "Consider if this table is needed or if it should be populated"
+    },
+    {
+      "type": "REVIEW_EMPTY_TABLE",
+      "priority": "LOW",
+      "description": "Review empty table \"AIAgentJob\"",
+      "details": "This table exists but contains no data",
+      "schema": "Consider if this table is needed or if it should be populated"
+    },
+    {
+      "type": "REVIEW_EMPTY_TABLE",
+      "priority": "LOW",
+      "description": "Review empty table \"AIAgentSettings\"",
+      "details": "This table exists but contains no data",
+      "schema": "Consider if this table is needed or if it should be populated"
+    },
+    {
+      "type": "REVIEW_EMPTY_TABLE",
+      "priority": "LOW",
+      "description": "Review empty table \"AIProviderSettings\"",
+      "details": "This table exists but contains no data",
+      "schema": "Consider if this table is needed or if it should be populated"
+    },
+    {
+      "type": "REVIEW_EMPTY_TABLE",
+      "priority": "LOW",
+      "description": "Review empty table \"Authenticator\"",
+      "details": "This table exists but contains no data",
+      "schema": "Consider if this table is needed or if it should be populated"
+    },
+    {
+      "type": "REVIEW_EMPTY_TABLE",
+      "priority": "LOW",
+      "description": "Review empty table \"ProgramType\"",
+      "details": "This table exists but contains no data",
+      "schema": "Consider if this table is needed or if it should be populated"
+    },
+    {
+      "type": "REVIEW_EMPTY_TABLE",
+      "priority": "LOW",
+      "description": "Review empty table \"ProjectMember\"",
+      "details": "This table exists but contains no data",
+      "schema": "Consider if this table is needed or if it should be populated"
+    },
+    {
+      "type": "REVIEW_EMPTY_TABLE",
+      "priority": "LOW",
+      "description": "Review empty table \"ProjectMemberWeeklyHours\"",
+      "details": "This table exists but contains no data",
+      "schema": "Consider if this table is needed or if it should be populated"
+    },
+    {
+      "type": "REVIEW_EMPTY_TABLE",
+      "priority": "LOW",
+      "description": "Review empty table \"ProjectProgramType\"",
+      "details": "This table exists but contains no data",
+      "schema": "Consider if this table is needed or if it should be populated"
+    },
+    {
+      "type": "REVIEW_EMPTY_TABLE",
+      "priority": "LOW",
+      "description": "Review empty table \"VerificationToken\"",
+      "details": "This table exists but contains no data",
+      "schema": "Consider if this table is needed or if it should be populated"
+    }
+  ]
+}

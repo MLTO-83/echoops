@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Test class */
+.test-tailwind {
+  @apply text-blue-500 font-bold;
+}

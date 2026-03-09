@@ -1,0 +1,17 @@
+{
+  "subscriptionId": "8e04ca2a-f1d6-4e29-afdc-d43b5e0d0ef9",
+  "notificationId": 21,
+  "id": "27646e0e-b520-4d2b-9411-bba7524947cd",
+  "eventType": "workitem.updated",
+  "publisherId": "tfs",
+  "resource": {
+    "workItemId": 123,
+    "revision": {
+      "fields": {
+        "System.TeamProject": "TestProject",
+        "System.Title": "Test Work Item",
+        "System.State": "New"
+      }
+    }
+  }
+}
