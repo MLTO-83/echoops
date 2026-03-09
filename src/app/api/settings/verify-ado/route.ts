@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
+import { getSession } from "@/lib/firebase/auth";
 
 /**
  * POST /api/settings/verify-ado - Verify ADO connection details
  */
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
 
     if (!session?.user) {
       return NextResponse.json(

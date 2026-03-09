@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import prisma from "@/lib/prisma";
-import { authOptions } from "@/auth";
+import { getSession } from "@/lib/firebase/auth";
+import { users, aiAgentSettings } from "@/lib/firebase/db";
 
 // GET - Fetch user profile information including license type
 export async function GET(req: NextRequest) {
@@ -9,7 +8,7 @@ export async function GET(req: NextRequest) {
     console.log("User Profile API: GET request received");
 
     // Get the user's session
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     console.log(
       "User Profile API: Session retrieved:",
       JSON.stringify(session?.user || {}, null, 2)
@@ -30,24 +29,7 @@ export async function GET(req: NextRequest) {
     );
 
     // Get user information including license type
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        image: true,
-        theme: true,
-        licenseType: true,
-        maxHoursPerWeek: true,
-        aiAgentSettings: {
-          select: {
-            id: true,
-            isActive: true,
-          },
-        },
-      },
-    });
+    const user = await users.findByEmail(session.user.email);
 
     if (!user) {
       console.log(
@@ -56,10 +38,30 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
+    // Fetch AI agent settings for this user
+    const agentSettings = await aiAgentSettings.findAll();
+    const userAgentSettings = agentSettings.filter(
+      (s: any) => s.userId === user.id
+    );
+
+    const userWithSettings = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      image: user.image,
+      theme: user.theme,
+      licenseType: user.licenseType,
+      maxHoursPerWeek: user.maxHoursPerWeek,
+      aiAgentSettings: userAgentSettings.map((s: any) => ({
+        id: s.id,
+        isActive: s.isActive,
+      })),
+    };
+
     console.log(
       `User Profile API: Successfully retrieved profile for user ${user.id}`
     );
-    return NextResponse.json({ user });
+    return NextResponse.json({ user: userWithSettings });
   } catch (error) {
     console.error("Error fetching user profile:", error);
     return NextResponse.json(
@@ -79,7 +81,7 @@ export async function PATCH(req: NextRequest) {
     console.log("User Profile API: PATCH request received");
 
     // Get the user's session
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     console.log(
       "User Profile API: Session retrieved:",
       JSON.stringify(session?.user || {}, null, 2)
@@ -113,6 +115,12 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
+    // Find user first
+    const user = await users.findByEmail(session.user.email);
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
     // Prepare update data
     const updateData: any = {};
     if (licenseType) updateData.licenseType = licenseType;
@@ -120,25 +128,22 @@ export async function PATCH(req: NextRequest) {
       updateData.maxHoursPerWeek = maxHoursPerWeek;
 
     // Update user profile
-    const updatedUser = await prisma.user.update({
-      where: { email: session.user.email },
-      data: updateData,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        image: true,
-        licenseType: true,
-        maxHoursPerWeek: true,
-      },
-    });
+    await users.update(user.id, updateData);
+    const updatedUser = await users.findById(user.id);
 
     console.log(
-      `User Profile API: Successfully updated profile for user ${updatedUser.id}`
+      `User Profile API: Successfully updated profile for user ${user.id}`
     );
     return NextResponse.json({
       message: "Profile updated successfully",
-      user: updatedUser,
+      user: {
+        id: updatedUser!.id,
+        name: updatedUser!.name,
+        email: updatedUser!.email,
+        image: updatedUser!.image,
+        licenseType: updatedUser!.licenseType,
+        maxHoursPerWeek: updatedUser!.maxHoursPerWeek,
+      },
     });
   } catch (error) {
     console.error("Error updating user profile:", error);

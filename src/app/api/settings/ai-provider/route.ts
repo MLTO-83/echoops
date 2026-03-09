@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
-import prisma from "@/lib/prisma";
+import { getSession } from "@/lib/firebase/auth";
+import { users, organizations, aiProviderSettings } from "@/lib/firebase/db";
 
 // GET /api/settings/ai-provider - fetch current org's AI provider settings
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   if (!session?.user)
     return NextResponse.json(
       { error: "Authentication required" },
@@ -19,11 +18,9 @@ export async function GET(req: NextRequest) {
   }
 
   const orgId = session.user.organizationId as string;
-  const settings = await prisma.aIProviderSettings.findMany({
-    where: { organizationId: orgId },
-  });
+  const settings = await aiProviderSettings.findByOrganization(orgId);
   // Mask apiKey for UI
-  const masked = settings.map((s) => ({
+  const masked = settings.map((s: any) => ({
     id: s.id,
     provider: s.provider,
     apiKey: s.apiKey ? "************" : "",
@@ -40,7 +37,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   console.log("AI Provider POST endpoint called");
 
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   if (!session?.user) {
     console.log("No authenticated user found");
     return NextResponse.json(
@@ -82,41 +79,26 @@ export async function POST(req: NextRequest) {
         "My Organization";
       console.log("Creating new organization:", orgName);
 
-      const organization = await prisma.organization.create({
-        data: { name: orgName },
-      });
-      console.log("Created organization:", organization.id);
+      const org = await organizations.create({ name: orgName });
+      console.log("Created organization:", org.id);
 
       // Update the user with the new organization ID
-      await prisma.user.update({
-        where: { id: session.user.id },
-        data: { organizationId: organization.id },
-      });
+      await users.update(session.user.id, { organizationId: org.id });
       console.log("Updated user with organization ID");
 
-      // Use the new organization ID
-      const orgId = organization.id;
-
       console.log("Creating AI provider settings with new organization");
-      const settings = await prisma.aIProviderSettings.create({
-        data: {
-          organizationId: orgId,
-          provider,
-          apiKey,
-          model,
-          temperature: temperature || 0.7,
-          maxTokens: maxTokens || 1000,
-        },
+      await aiProviderSettings.upsert(org.id, provider, {
+        apiKey,
+        model,
+        temperature: temperature || 0.7,
+        maxTokens: maxTokens || 1000,
       });
 
-      console.log(
-        "Successfully created AI provider settings with ID:",
-        settings.id
-      );
+      console.log("Successfully created AI provider settings");
       return NextResponse.json({
         success: true,
         message: "AI provider settings created with new organization",
-        provider: settings.provider,
+        provider,
       });
     }
 
@@ -124,47 +106,19 @@ export async function POST(req: NextRequest) {
     const orgId = session.user.organizationId;
     console.log("Using existing organization:", orgId);
 
-    // First try to find existing settings
-    const existing = await prisma.aIProviderSettings.findUnique({
-      where: {
-        organizationId_provider: {
-          organizationId: orgId,
-          provider: provider,
-        },
-      },
+    // Upsert AI provider settings
+    await aiProviderSettings.upsert(orgId, provider, {
+      apiKey,
+      model,
+      temperature: temperature || 0.7,
+      maxTokens: maxTokens || 1000,
     });
 
-    let result;
-    if (existing) {
-      console.log("Updating existing AI provider settings");
-      result = await prisma.aIProviderSettings.update({
-        where: { id: existing.id },
-        data: {
-          apiKey,
-          model,
-          temperature: temperature || 0.7,
-          maxTokens: maxTokens || 1000,
-        },
-      });
-    } else {
-      console.log("Creating new AI provider settings");
-      result = await prisma.aIProviderSettings.create({
-        data: {
-          organizationId: orgId,
-          provider,
-          apiKey,
-          model,
-          temperature: temperature || 0.7,
-          maxTokens: maxTokens || 1000,
-        },
-      });
-    }
-
-    console.log("Successfully saved AI provider settings with ID:", result.id);
+    console.log("Successfully saved AI provider settings");
     return NextResponse.json({
       success: true,
       message: "AI provider settings saved successfully",
-      provider: result.provider,
+      provider,
     });
   } catch (error) {
     console.error("Error processing AI provider settings:", error);

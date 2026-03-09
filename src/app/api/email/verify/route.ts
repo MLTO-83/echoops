@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import { users, verificationTokens } from "@/lib/firebase/db";
 
 /**
  * GET /api/email/verify - Verifies a user's email using token
@@ -17,9 +17,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Find the verification token in the database
-    const verificationToken = await prisma.verificationToken.findUnique({
-      where: { token },
-    });
+    const verificationToken = await verificationTokens.findByToken(token);
 
     // Check if token exists and is not expired
     if (!verificationToken) {
@@ -37,24 +35,17 @@ export async function GET(req: NextRequest) {
     }
 
     // Find the user by email and update their emailVerified timestamp
-    const user = await prisma.user.findUnique({
-      where: { email: verificationToken.identifier },
-    });
+    const user = await users.findByEmail(verificationToken.identifier);
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     // Update the user's emailVerified field with the current timestamp
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { emailVerified: new Date() },
-    });
+    await users.update(user.id, { emailVerified: new Date() });
 
     // Delete the used verification token
-    await prisma.verificationToken.delete({
-      where: { token },
-    });
+    await verificationTokens.deleteByToken(token);
 
     return NextResponse.json({
       success: true,

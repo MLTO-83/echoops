@@ -1,9 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import type { Prisma } from "@prisma/client";
-
-// Define ProgramType type locally since it's not directly exported from Prisma
 type ProgramType = {
   id: string;
   name: string;

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHash, createHmac } from "crypto";
-import prisma from "../../../../../lib/prisma";
+import { projects, projectWebhookConfig } from "@/lib/firebase/db";
 
 /**
  * Advanced diagnostic endpoint for webhook signature debugging
@@ -52,17 +52,18 @@ export async function POST(request: NextRequest) {
 
       // Try to find the project by name
       try {
-        const project = await prisma.project.findFirst({
-          where: { name: projectName },
-          include: { webhookConfig: true },
-        });
+        const allProjects = await projects.findMany();
+        const project = allProjects.find((p) => p.name === projectName);
 
         if (project) {
           projectId = project.id;
 
           // Use project-specific secret if available
-          if (project.webhookConfig?.secret) {
-            secret = project.webhookConfig.secret;
+          const webhookConfig = await projectWebhookConfig.findByProject(
+            project.id
+          );
+          if (webhookConfig?.secret) {
+            secret = webhookConfig.secret;
             console.log(
               `Using project-specific webhook secret for project ${projectName}`
             );
@@ -76,17 +77,17 @@ export async function POST(request: NextRequest) {
     // Also try to get projectId from body if provided directly
     if (payload.projectId && !projectId) {
       try {
-        const project = await prisma.project.findUnique({
-          where: { id: payload.projectId },
-          include: { webhookConfig: true },
-        });
+        const project = await projects.findById(payload.projectId);
 
         if (project) {
           projectId = project.id;
           projectName = project.name;
 
-          if (project.webhookConfig?.secret) {
-            secret = project.webhookConfig.secret;
+          const webhookConfig = await projectWebhookConfig.findByProject(
+            project.id
+          );
+          if (webhookConfig?.secret) {
+            secret = webhookConfig.secret;
             console.log(
               `Using project-specific webhook secret for project ID ${projectId}`
             );

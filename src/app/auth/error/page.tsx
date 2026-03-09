@@ -12,6 +12,9 @@ function ErrorContent() {
     Configuration: "There is a problem with the server configuration.",
     AccessDenied: "You do not have access to this resource.",
     Verification: "The verification link was invalid or has expired.",
+    "auth/popup-closed-by-user": "Sign-in popup was closed before completing.",
+    "auth/account-exists-with-different-credential": "An account already exists with the same email but a different sign-in method.",
+    "auth/cancelled-popup-request": "Sign-in was cancelled.",
     Default: "An error occurred during authentication.",
   };
 

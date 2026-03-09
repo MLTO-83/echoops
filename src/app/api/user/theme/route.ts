@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import prisma from "@/lib/prisma";
-import { authOptions } from "@/auth";
+import { getSession } from "@/lib/firebase/auth";
+import { users } from "@/lib/firebase/db";
 
 // GET - Fetch current user theme preference
 export async function GET(req: NextRequest) {
@@ -9,7 +8,7 @@ export async function GET(req: NextRequest) {
     console.log("Theme API: GET request received");
 
     // Get the user's session using the authOptions
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     console.log(
       "Theme API: Session retrieved:",
       JSON.stringify(session?.user || {}, null, 2)
@@ -27,10 +26,7 @@ export async function GET(req: NextRequest) {
 
     // Retrieve user theme preference directly
     try {
-      const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { theme: true, id: true },
-      });
+      const user = await users.findByEmail(session.user.email);
 
       console.log(
         `Theme API: User lookup result:`,
@@ -79,7 +75,7 @@ export async function POST(req: NextRequest) {
   try {
     console.log("Theme API POST: Request received");
 
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     console.log(
       "Theme API POST: Session retrieved:",
       JSON.stringify(session?.user || {}, null, 2)
@@ -111,13 +107,14 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-      // Update user theme preference in the database using upsert
-      // This will create a user if one doesn't exist, or update if it does
-      const updatedUser = await prisma.user.update({
-        where: { email: userEmail },
-        data: { theme },
-        select: { id: true, theme: true },
-      });
+      // Find user first, then update
+      const user = await users.findByEmail(userEmail);
+      if (!user) {
+        return NextResponse.json({ error: "User not found" }, { status: 404 });
+      }
+
+      await users.update(user.id, { theme });
+      const updatedUser = await users.findById(user.id);
 
       console.log(
         `Theme API POST: Successfully updated theme to ${theme} for user ${userEmail}`,
@@ -126,7 +123,7 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({
         message: "Theme preference updated successfully",
-        theme: updatedUser.theme,
+        theme: updatedUser!.theme,
       });
     } catch (dbError) {
       console.error(

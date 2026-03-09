@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
-import prisma from "@/lib/prisma";
+import { getSession } from "@/lib/firebase/auth";
+import { users, organizations, adoConnections } from "@/lib/firebase/db";
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
 
     // Check if user is authenticated
     if (!session || !session.user) {
@@ -33,62 +32,30 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the user from database
-    const user = await prisma.user.findUnique({
-      where: { email: userEmail },
-      include: { organization: true },
-    });
+    const user = await users.findByEmail(userEmail);
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    let organization = user.organization;
+    let organizationId = user.organizationId;
 
     // If the user doesn't have an organization, create one
-    if (!organization) {
-      organization = await prisma.organization.create({
-        data: {
-          name: `${user.name || "New"}'s Organization`,
-          users: {
-            connect: { id: user.id },
-          },
-        },
+    if (!organizationId) {
+      const organization = await organizations.create({
+        name: `${user.name || "New"}'s Organization`,
       });
 
       // Update the user with the new organization
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { organizationId: organization.id },
-      });
+      await users.update(user.id, { organizationId: organization.id });
+      organizationId = organization.id;
     }
 
-    // Check if an ADOConnection already exists for this organization
-    const existingConnection = await prisma.aDOConnection.findUnique({
-      where: { organizationId: organization.id },
+    // Create or update the ADO Connection with the PAT (upsert handles both cases)
+    await adoConnections.upsert(organizationId, {
+      pat,
+      adoOrganizationUrl: orgUrl,
     });
-
-    // Create or update the ADO Connection with the PAT
-    if (existingConnection) {
-      // Update existing connection
-      await prisma.aDOConnection.update({
-        where: { id: existingConnection.id },
-        data: {
-          pat,
-          adoOrganizationUrl: orgUrl,
-        },
-      });
-    } else {
-      // Create new connection
-      await prisma.aDOConnection.create({
-        data: {
-          pat,
-          adoOrganizationUrl: orgUrl,
-          organization: {
-            connect: { id: organization.id },
-          },
-        },
-      });
-    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

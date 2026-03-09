@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
-import prisma from "@/lib/prisma";
+import { getSession } from "@/lib/firebase/auth";
+import { users, organizations, programTypes } from "@/lib/firebase/db";
 
 // Get all program types (tags) for an organization
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
 
     // Check if user is authenticated
     if (!session || !session.user) {
@@ -24,14 +23,17 @@ export async function GET(request: NextRequest) {
     }
 
     // Get the user and their organization
-    const user = await prisma.user.findUnique({
-      where: { email: userEmail },
-      include: {
-        organization: true,
-      },
-    });
+    const user = await users.findByEmail(userEmail);
 
-    if (!user || !user.organization) {
+    if (!user || !user.organizationId) {
+      return NextResponse.json(
+        { error: "Organization not found" },
+        { status: 404 }
+      );
+    }
+
+    const organization = await organizations.findById(user.organizationId);
+    if (!organization) {
       return NextResponse.json(
         { error: "Organization not found" },
         { status: 404 }
@@ -39,12 +41,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Get all program types (tags) for the organization
-    const programTypes = await prisma.programType.findMany({
-      where: { organizationId: user.organization.id },
-      orderBy: { name: "asc" },
-    });
+    const orgProgramTypes = await programTypes.findByOrganization(organization.id);
 
-    return NextResponse.json({ programTypes });
+    // Sort by name ascending
+    orgProgramTypes.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+
+    return NextResponse.json({ programTypes: orgProgramTypes });
   } catch (error) {
     console.error("Error fetching program types:", error);
     return NextResponse.json(
@@ -57,7 +59,7 @@ export async function GET(request: NextRequest) {
 // Create a new program type (tag)
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
 
     // Check if user is authenticated
     if (!session || !session.user) {
@@ -75,14 +77,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the user and their organization
-    const user = await prisma.user.findUnique({
-      where: { email: userEmail },
-      include: {
-        organization: true,
-      },
-    });
+    const user = await users.findByEmail(userEmail);
 
-    if (!user || !user.organization) {
+    if (!user || !user.organizationId) {
+      return NextResponse.json(
+        { error: "Organization not found" },
+        { status: 404 }
+      );
+    }
+
+    const organization = await organizations.findById(user.organizationId);
+    if (!organization) {
       return NextResponse.json(
         { error: "Organization not found" },
         { status: 404 }
@@ -96,16 +101,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
     }
 
-    // Check if program type already exists
-    const existingProgramType = await prisma.programType.findFirst({
-      where: {
-        organizationId: user.organization.id,
-        name: {
-          equals: name,
-          mode: "insensitive", // Case insensitive search
-        },
-      },
-    });
+    // Check if program type already exists (case insensitive)
+    const existingProgramType = await programTypes.findByOrgAndName(
+      organization.id,
+      name
+    );
 
     if (existingProgramType) {
       return NextResponse.json(
@@ -115,14 +115,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Create new program type (tag)
-    const programType = await prisma.programType.create({
-      data: {
-        name,
-        description,
-        organization: {
-          connect: { id: user.organization.id },
-        },
-      },
+    const programType = await programTypes.create({
+      name,
+      description,
+      organizationId: organization.id,
     });
 
     return NextResponse.json({ programType }, { status: 201 });

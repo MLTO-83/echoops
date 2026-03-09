@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
-import prisma from "@/lib/prisma";
+import { getSession } from "@/lib/firebase/auth";
+import { users, verificationTokens } from "@/lib/firebase/db";
 import { createHash } from "crypto";
 
 // Initialize Resend with API key from environment variables
@@ -31,7 +30,7 @@ function generateVerificationToken(email: string): string {
 export async function POST(req: NextRequest) {
   try {
     // Check authentication first - only authenticated users can verify their email
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!session?.user?.email) {
       return NextResponse.json(
         { error: "Authentication required" },
@@ -44,10 +43,7 @@ export async function POST(req: NextRequest) {
     const firstName = session.user.name?.split(" ")[0] || email.split("@")[0];
 
     // Check if email is already verified
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { emailVerified: true },
-    });
+    const user = await users.findById(userId);
 
     if (user?.emailVerified) {
       return NextResponse.json(
@@ -63,12 +59,10 @@ export async function POST(req: NextRequest) {
     const expires = new Date();
     expires.setHours(expires.getHours() + 1); // Token valid for 60 minutes
 
-    await prisma.verificationToken.create({
-      data: {
-        identifier: email,
-        token,
-        expires,
-      },
+    await verificationTokens.create({
+      identifier: email,
+      token,
+      expires,
     });
 
     // Generate verification URL
@@ -83,20 +77,20 @@ export async function POST(req: NextRequest) {
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
           <p>Hi ${firstName},</p>
-          
+
           <p>Thanks for signing up with Portavi! To complete your registration and activate your account, please verify your email address by clicking the link below:</p>
-          
+
           <p style="margin: 20px 0;">
             <a href="${verificationUrl}" style="background-color: #4A90E2; color: white; padding: 10px 20px; text-align: center; text-decoration: none; display: inline-block; border-radius: 4px;">Verify Email Address</a>
           </p>
-          
+
           <p>This link will expire in 60 minutes. Once you've clicked it, you'll be fully validated and able to access all areas of your Portavi dashboard.</p>
-          
+
           <p>If you didn't create a Portavi account, you can safely ignore this message.</p>
-          
+
           <p>Welcome aboard!</p>
-          
-          <p>— The Portavi Team</p>
+
+          <p>--- The Portavi Team</p>
         </div>
       `,
       text: `
@@ -112,7 +106,7 @@ If you didn't create a Portavi account, you can safely ignore this message.
 
 Welcome aboard!
 
-— The Portavi Team
+--- The Portavi Team
       `,
     });
 

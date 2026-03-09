@@ -1,12 +1,25 @@
 "use client";
 
-import { signIn } from "next-auth/react";
+import { signInWithPopup } from "firebase/auth";
+import { auth, githubProvider } from "@/lib/firebase/client";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { useState, Suspense } from "react";
 
 function SignUpContent() {
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const router = useRouter();
+
+  const handleSignUp = async () => {
+    try {
+      await signInWithPopup(auth, githubProvider);
+      router.push("/dashboard");
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Authentication failed";
+      router.push(`/auth/error?error=${encodeURIComponent(errorMessage)}`);
+    }
+  };
 
   return (
     <div className="flex min-h-screen flex-col items-center p-6 md:p-12">
@@ -97,9 +110,7 @@ function SignUpContent() {
 
                 {/* GitHub signup */}
                 <button
-                  onClick={() =>
-                    signIn("github", { callbackUrl: "/dashboard" })
-                  }
+                  onClick={handleSignUp}
                   disabled={!termsAccepted}
                   className={`button-primary w-full flex items-center justify-center px-4 py-3 transition-all duration-200 ${
                     !termsAccepted ? "opacity-50 cursor-not-allowed" : ""

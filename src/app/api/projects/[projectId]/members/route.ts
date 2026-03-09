@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
-import prisma from "@/lib/prisma";
+import { getSession } from "@/lib/firebase/auth";
+import { projects, projectMembers, users } from "@/lib/firebase/db";
 
 /**
  * API Route handler for project member operations
@@ -9,7 +8,7 @@ import prisma from "@/lib/prisma";
  */
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -28,9 +27,7 @@ export async function GET(req: NextRequest) {
     console.log(`Fetching members for project ID: ${projectId}`);
 
     // Verify the project exists first
-    const project = await prisma.project.findUnique({
-      where: { id: projectId },
-    });
+    const project = await projects.findById(projectId);
 
     if (!project) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
@@ -40,30 +37,35 @@ export async function GET(req: NextRequest) {
     // Note: This removes the restriction that the user must be a project member
 
     // Fetch project members
-    const projectMembers = await prisma.projectMember.findMany({
-      where: { projectId },
-      include: {
-        user: {
-          select: { id: true, name: true, email: true, image: true },
-        },
-        weeklyHours: true,
-      },
-      orderBy: { role: "asc" },
-    });
+    const members = await projectMembers.findByProject(projectId);
 
-    // Organize the data for the response
-    const formattedMembers = projectMembers.map((member) => ({
-      id: member.id,
-      userId: member.userId,
-      role: member.role,
-      weeklyHours: member.weeklyHours,
-      user: {
-        id: member.user.id,
-        name: member.user.name || "Unknown User",
-        email: member.user.email || "no-email@example.com",
-        image: member.user.image,
-      },
-    }));
+    // Fetch user data and weekly hours in parallel for each member
+    const formattedMembers = await Promise.all(
+      members.map(async (member) => {
+        const [user, weeklyHours] = await Promise.all([
+          users.findById(member.userId),
+          import("@/lib/firebase/db").then((db) =>
+            db.projectMemberWeeklyHours.findByMember(projectId, member.userId)
+          ),
+        ]);
+
+        return {
+          id: `${member.userId}_${member.projectId}`,
+          userId: member.userId,
+          role: member.role,
+          weeklyHours,
+          user: {
+            id: user?.id || member.userId,
+            name: user?.name || "Unknown User",
+            email: user?.email || "no-email@example.com",
+            image: user?.image || null,
+          },
+        };
+      })
+    );
+
+    // Sort by role ascending
+    formattedMembers.sort((a, b) => a.role.localeCompare(b.role));
 
     return NextResponse.json({
       success: true,
@@ -88,7 +90,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     // Check authentication
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!session?.user) {
       return NextResponse.json(
         { error: "Authentication required" },
@@ -108,9 +110,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if the project exists
-    const project = await prisma.project.findUnique({
-      where: { id: projectId },
-    });
+    const project = await projects.findById(projectId);
 
     if (!project) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
@@ -118,19 +118,12 @@ export async function POST(req: NextRequest) {
 
     // DEVELOPMENT MODE: Skip permission check and allow any authenticated user to add members
     // TODO: Restore permission check for production
-    /* 
+    /*
     // Verify the user has admin access to the project
     const userEmail = session.user.email as string;
-    const userAccess = await prisma.projectMember.findFirst({
-      where: {
-        project: { id: projectId },
-        user: { email: userEmail },
-        role: { in: ["OWNER", "MANAGER"] },
-      },
-    });
-
-    // If user is not a manager or owner, deny access
-    if (!userAccess) {
+    const userAccess = await projectMembers.findByUserAndProject(session.user.id, projectId);
+    // Check role
+    if (!userAccess || !["OWNER", "MANAGER"].includes(userAccess.role)) {
       return NextResponse.json(
         { error: "You don't have permission to add members to this project" },
         { status: 403 }
@@ -150,21 +143,15 @@ export async function POST(req: NextRequest) {
     let targetUser;
 
     if (userId) {
-      targetUser = await prisma.user.findUnique({
-        where: { id: userId },
-      });
+      targetUser = await users.findById(userId);
     } else if (email) {
-      targetUser = await prisma.user.findFirst({
-        where: { email },
-      });
+      targetUser = await users.findByEmail(email);
 
       // If user doesn't exist, create them
       if (!targetUser) {
-        targetUser = await prisma.user.create({
-          data: {
-            email,
-            name: email.split("@")[0], // Simple name from email
-          },
+        targetUser = await users.create({
+          email,
+          name: email.split("@")[0], // Simple name from email
         });
       }
     } else {
@@ -174,13 +161,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (!targetUser) {
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      );
+    }
+
     // Check if user already a member
-    const existingMember = await prisma.projectMember.findFirst({
-      where: {
-        projectId,
-        userId: targetUser.id,
-      },
-    });
+    const existingMember = await projectMembers.findByUserAndProject(
+      targetUser.id,
+      projectId
+    );
 
     if (existingMember) {
       // Member already exists: return success to avoid client-side 409 conflicts
@@ -191,30 +183,26 @@ export async function POST(req: NextRequest) {
     }
 
     // Add the user as a project member
-    const newMember = await prisma.projectMember.create({
-      data: {
-        userId: targetUser.id,
-        projectId,
-        role: role || "MEMBER",
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            image: true,
-          },
-        },
-      },
+    const newMember = await projectMembers.create({
+      userId: targetUser.id,
+      projectId,
+      role: role || "MEMBER",
     });
+
+    // Fetch the user data for the response
+    const memberUser = await users.findById(targetUser.id);
 
     return NextResponse.json({
       success: true,
       member: {
-        id: newMember.id,
+        id: `${newMember.userId}_${newMember.projectId}`,
         role: newMember.role,
-        user: newMember.user,
+        user: {
+          id: memberUser?.id || targetUser.id,
+          name: memberUser?.name || null,
+          email: memberUser?.email || null,
+          image: memberUser?.image || null,
+        },
       },
     });
   } catch (error) {
@@ -232,7 +220,7 @@ export async function POST(req: NextRequest) {
 // PUT /api/projects/:projectId/members - Update a project member
 export async function PUT(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
 
     if (!session?.user) {
       return NextResponse.json(
@@ -255,16 +243,8 @@ export async function PUT(req: NextRequest) {
     }
 
     // Update project member
-    const updatedMember = await prisma.projectMember.update({
-      where: {
-        userId_projectId: {
-          userId: userId,
-          projectId: projectId,
-        },
-      },
-      data: {
-        role: role || undefined,
-      },
+    const updatedMember = await projectMembers.update(projectId, userId, {
+      role: role || undefined,
     });
 
     return NextResponse.json({ member: updatedMember });
@@ -280,7 +260,7 @@ export async function PUT(req: NextRequest) {
 // DELETE /api/projects/:projectId/members/:userId - Remove a project member
 export async function DELETE(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
 
     if (!session?.user) {
       return NextResponse.json(
@@ -308,15 +288,23 @@ export async function DELETE(req: NextRequest) {
 
     // Verify the requestor has admin access to the project
     const requestorEmail = session.user.email as string;
-    const requestorAccess = await prisma.projectMember.findFirst({
-      where: {
-        project: { id: projectId },
-        user: { email: requestorEmail },
-        role: { in: ["OWNER", "MANAGER"] },
-      },
-    });
+    const requestorUser = await users.findByEmail(requestorEmail);
+    if (requestorUser) {
+      const requestorAccess = await projectMembers.findByUserAndProject(
+        requestorUser.id,
+        projectId
+      );
 
-    if (!requestorAccess) {
+      if (!requestorAccess || !["OWNER", "MANAGER"].includes(requestorAccess.role)) {
+        return NextResponse.json(
+          {
+            error:
+              "You don't have permission to remove members from this project",
+          },
+          { status: 403 }
+        );
+      }
+    } else {
       return NextResponse.json(
         {
           error:
@@ -327,14 +315,7 @@ export async function DELETE(req: NextRequest) {
     }
 
     // Delete the project member
-    await prisma.projectMember.delete({
-      where: {
-        userId_projectId: {
-          userId: userId,
-          projectId: projectId,
-        },
-      },
-    });
+    await projectMembers.delete(projectId, userId);
 
     return NextResponse.json({
       success: true,

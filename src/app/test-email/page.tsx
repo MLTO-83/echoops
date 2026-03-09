@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/app/components/FirebaseAuthProvider";
 
 export default function TestEmailPage() {
   const { data: session } = useSession();

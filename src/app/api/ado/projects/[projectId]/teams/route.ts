@@ -2,16 +2,15 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
-import prisma from "@/lib/prisma";
+import { getSession } from "@/lib/firebase/auth";
+import { users, adoConnections } from "@/lib/firebase/db";
 
 /**
  * GET /api/ado/projects/[projectId]/teams - Fetch teams for a specific ADO project
  */
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!session?.user) {
       return NextResponse.json(
         { error: "Authentication required" },
@@ -24,10 +23,7 @@ export async function GET(req: NextRequest) {
     const projectId = pathParts[pathParts.indexOf("projects") + 1];
 
     // Get user's organization
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email as string },
-      select: { organizationId: true },
-    });
+    const user = await users.findByEmail(session.user.email as string);
 
     if (!user || !user.organizationId) {
       return NextResponse.json(
@@ -37,9 +33,9 @@ export async function GET(req: NextRequest) {
     }
 
     // Get ADO connection details
-    const adoConnection = await prisma.aDOConnection.findUnique({
-      where: { organizationId: user.organizationId },
-    });
+    const adoConnection = await adoConnections.findByOrganizationId(
+      user.organizationId
+    );
 
     if (!adoConnection) {
       return NextResponse.json(

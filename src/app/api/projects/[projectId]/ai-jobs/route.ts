@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
-import prisma from "@/lib/prisma";
+import { getSession } from "@/lib/firebase/auth";
+import { projects, aiAgentJobs } from "@/lib/firebase/db";
 
 export const dynamic = "force-dynamic"; // Ensure the route is always dynamic and not cached
 
 // GET /api/projects/{projectId}/ai-jobs - get AI agent jobs for a project
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!session?.user) {
       return NextResponse.json(
         { error: "Authentication required" },
@@ -28,9 +27,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Check if project exists
-    const project = await prisma.project.findUnique({
-      where: { id: projectId },
-    });
+    const project = await projects.findById(projectId);
 
     if (!project) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
@@ -39,17 +36,17 @@ export async function GET(req: NextRequest) {
     // Remove strict membership check - just ensure user is authenticated
     // This allows any authenticated user to view AI jobs for a project
 
-    // Fetch the project's AI agent jobs - include ALL jobs for this project
-    const jobs = await prisma.aIAgentJob.findMany({
-      where: {
-        projectId: projectId,
-        // No filtering by status to ensure we get all jobs including CONFIGURED ones
-      },
-      orderBy: [
-        { updatedAt: "desc" }, // Most recently updated first
-      ],
-      take: 50, // Limit to the most recent 50 jobs
-    });
+    // Fetch the project's AI agent jobs - ordered by createdAt desc from Firebase
+    const allJobs = await aiAgentJobs.findByProject(projectId);
+
+    // Sort by updatedAt desc and limit to 50
+    const jobs = allJobs
+      .sort((a, b) => {
+        const aTime = a.updatedAt instanceof Date ? a.updatedAt.getTime() : new Date(a.updatedAt as any).getTime();
+        const bTime = b.updatedAt instanceof Date ? b.updatedAt.getTime() : new Date(b.updatedAt as any).getTime();
+        return bTime - aTime;
+      })
+      .slice(0, 50);
 
     return NextResponse.json({
       jobs: jobs,

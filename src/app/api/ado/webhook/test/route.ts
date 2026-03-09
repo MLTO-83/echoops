@@ -1,21 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "../../../../../auth";
-import prisma from "../../../../../lib/prisma";
+import { getSession } from "@/lib/firebase/auth";
+import {
+  users,
+  projects,
+  adoConnections,
+  states,
+  aiProviderSettings,
+  projectMembers,
+  projectWebhookConfig,
+} from "@/lib/firebase/db";
 import { createHmac } from "crypto";
 
 export async function POST(request: NextRequest) {
   try {
     // Enhanced session handling with debug
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     console.log(
       "Session check in webhook test:",
       session ? "Found" : "Not found"
     );
-
-    // Request cookies - useful for debugging
-    const cookies = request.cookies;
-    console.log("Cookies present:", cookies.size > 0 ? "Yes" : "No");
 
     if (!session?.user) {
       console.error("Webhook test: No authenticated session found");
@@ -74,14 +77,11 @@ export async function POST(request: NextRequest) {
     // Get user information - use email from session or bypass in development
     let user = null;
     if (session?.user?.email) {
-      user = await prisma.user.findUnique({
-        where: {
-          email: session.user.email as string,
-        },
-      });
+      user = await users.findByEmail(session.user.email as string);
     } else if (process.env.NODE_ENV !== "production") {
       // In development, find any user
-      user = await prisma.user.findFirst();
+      const allUsers = await users.findMany();
+      user = allUsers.length > 0 ? allUsers[0] : null;
       console.log(
         "Webhook test: Using fallback user in dev mode:",
         user?.email
@@ -102,13 +102,13 @@ export async function POST(request: NextRequest) {
     // Check required tables are populated and set up correctly before proceeding
 
     // 1. Check if State table has been seeded with required values
-    const statesCount = await prisma.state.count();
+    const statesCount = await states.count();
     if (statesCount === 0) {
       // States need to be seeded first
       console.log("Missing States records. Seeding States table...");
 
       // Add required states
-      const states = [
+      const stateList = [
         {
           id: "new",
           name: "New",
@@ -148,52 +148,33 @@ export async function POST(request: NextRequest) {
       ];
 
       // Insert the states
-      for (const state of states) {
-        await prisma.state.upsert({
-          where: { id: state.id },
-          update: state,
-          create: state,
+      for (const state of stateList) {
+        await states.upsert(state.id, {
+          name: state.name,
+          description: state.description,
         });
       }
       console.log("States table seeded successfully");
     }
 
     // 2. Check if AI Provider is configured
-    const aiProviderSettings = await prisma.aIProviderSettings.findFirst({
-      where: {
-        organizationId: user.organizationId,
-      },
-    });
+    const existingProviderSettings =
+      await aiProviderSettings.findByOrganization(user.organizationId);
 
-    if (!aiProviderSettings) {
+    if (existingProviderSettings.length === 0) {
       // Create a default AI Provider setting if none exists
       console.log("Creating default AI Provider settings...");
-      await prisma.aIProviderSettings.create({
-        data: {
-          organization: {
-            connect: { id: user.organizationId },
-          },
-          provider: "OPENAI", // Default provider
-          model: "gpt-4", // Default model
-          temperature: 0.7,
-          maxTokens: 2000,
-          apiKey: process.env.OPENAI_API_KEY || "sk-demo-key",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
+      await aiProviderSettings.upsert(user.organizationId, "OPENAI", {
+        model: "gpt-4",
+        temperature: 0.7,
+        maxTokens: 2000,
+        apiKey: process.env.OPENAI_API_KEY || "sk-demo-key",
       });
       console.log("Default AI Provider settings created");
     }
 
     // 3. Get the project to check the ADO connection
-    const project = await prisma.project.findUnique({
-      where: {
-        id: projectId,
-      },
-      include: {
-        adoConnection: true,
-      },
-    });
+    const project = await projects.findById(projectId);
 
     if (!project) {
       return NextResponse.json(
@@ -202,7 +183,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!project.adoConnection) {
+    // Get the ADO connection
+    let adoConnection = null;
+    if (project.adoConnectionId) {
+      adoConnection = await adoConnections.findByOrganizationId(
+        project.adoConnectionId
+      );
+    }
+
+    if (!adoConnection) {
       return NextResponse.json(
         { error: "Project has no ADO connection configured", status: 400 },
         { status: 400 }
@@ -211,19 +200,14 @@ export async function POST(request: NextRequest) {
 
     // 4. Ensure the project has the correct stateId
     if (!project.stateId) {
-      await prisma.project.update({
-        where: { id: projectId },
-        data: { stateId: "in_progress" }, // Set default state for ADO projects
-      });
+      await projects.update(projectId, { stateId: "in_progress" });
       console.log(
         `Updated project ${projectId} with default state 'in_progress'`
       );
     }
 
     // 5. Check if there are valid project members
-    const membersCount = await prisma.projectMember.count({
-      where: { projectId },
-    });
+    const membersCount = await projectMembers.count(projectId);
 
     if (membersCount <= 1) {
       // Only the current user
@@ -236,21 +220,21 @@ export async function POST(request: NextRequest) {
     let adoConnectionValid = false;
     try {
       // Format URL properly
-      let url = project.adoConnection.adoOrganizationUrl;
-      if (!url.startsWith("https://")) {
-        url = `https://${url}`;
+      let adoUrl = adoConnection.adoOrganizationUrl;
+      if (!adoUrl.startsWith("https://")) {
+        adoUrl = `https://${adoUrl}`;
       }
-      if (url.endsWith("/")) {
-        url = url.slice(0, -1);
+      if (adoUrl.endsWith("/")) {
+        adoUrl = adoUrl.slice(0, -1);
       }
 
       // Make a test call to the ADO API
       const response = await fetch(
-        `${url}/_apis/projects/${adoProjectId}?api-version=6.0`,
+        `${adoUrl}/_apis/projects/${adoProjectId}?api-version=6.0`,
         {
           headers: {
             Authorization: `Basic ${Buffer.from(
-              `:${project.adoConnection.pat}`
+              `:${adoConnection.pat}`
             ).toString("base64")}`,
           },
         }
@@ -349,27 +333,12 @@ export async function POST(request: NextRequest) {
 
     // 7. Save the webhook configuration if it doesn't exist yet
     // Find existing config to preserve active state
-    const existingConfig = await prisma.projectWebhookConfig.findUnique({
-      where: { projectId },
-    });
+    const existingConfig = await projectWebhookConfig.findByProject(projectId);
 
-    await prisma.projectWebhookConfig.upsert({
-      where: {
-        projectId,
-      },
-      update: {
-        secret,
-        // Preserve existing active state if present, otherwise default to false
-        // This avoids overriding the user's choice during testing
-        active: existingConfig?.active ?? false,
-        updatedAt: new Date(),
-      },
-      create: {
-        projectId,
-        secret,
-        // New configs are inactive by default - user must explicitly activate
-        active: false,
-      },
+    await projectWebhookConfig.upsert(projectId, {
+      secret,
+      // Preserve existing active state if present, otherwise default to false
+      active: existingConfig?.active ?? false,
     });
 
     console.log(`Webhook configuration saved for project ${projectId}`);
@@ -381,7 +350,7 @@ export async function POST(request: NextRequest) {
         message:
           "Webhook connection verified successfully. Now Azure DevOps can trigger your AI agent.",
         adoConnectionValid,
-        aiProviderConfigured: !!aiProviderSettings,
+        aiProviderConfigured: existingProviderSettings.length > 0,
         projectMembersCount: membersCount,
       },
       { status: 200 }

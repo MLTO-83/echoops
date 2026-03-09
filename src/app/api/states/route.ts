@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
-import prisma from "@/lib/prisma";
+import { getSession } from "@/lib/firebase/auth";
+import { states } from "@/lib/firebase/db";
 
 /**
  * GET /api/states - Retrieve all available project states
  */
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!session?.user) {
       return NextResponse.json(
         { error: "Authentication required" },
@@ -17,13 +16,9 @@ export async function GET() {
     }
 
     // Fetch all states from the database
-    const states = await prisma.state.findMany({
-      orderBy: {
-        name: "asc",
-      },
-    });
+    const allStates = await states.findMany();
 
-    return NextResponse.json({ states });
+    return NextResponse.json({ states: allStates });
   } catch (error) {
     console.error("Error retrieving states:", error);
     return NextResponse.json(

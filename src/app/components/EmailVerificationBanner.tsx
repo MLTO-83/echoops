@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Session } from "next-auth";
 import { useRouter } from "next/navigation";
 
 interface EmailVerificationBannerProps {
-  session: Session | null;
+  session: { user: { id: string; name?: string | null; email?: string | null; image?: string | null; organizationId?: string | null; theme?: string | null; emailVerified?: Date | null } } | null;
 }
 
 export default function EmailVerificationBanner({

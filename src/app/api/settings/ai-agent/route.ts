@@ -1,38 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
-import prisma from "@/lib/prisma";
+import { getSession } from "@/lib/firebase/auth";
+import { users, aiAgentSettings } from "@/lib/firebase/db";
 
 // GET /api/settings/ai-agent - fetch org users and active agent
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   if (!session?.user)
     return NextResponse.json(
       { error: "Authentication required" },
       { status: 401 }
     );
 
-  const orgId = session.user.organizationId; // organizationId is now part of the user object
+  const orgId = session.user.organizationId;
+
   // fetch org users
-  const users = await prisma.user.findMany({
-    where: { organizationId: orgId },
-    select: { id: true, name: true, email: true },
-  });
+  const allUsers = await users.findMany();
+  const orgUsers = allUsers
+    .filter((u: any) => u.organizationId === orgId)
+    .map((u: any) => ({ id: u.id, name: u.name, email: u.email }));
+
   // fetch active agent setting
-  const active = await prisma.aIAgentSettings.findFirst({
-    where: { isActive: true, user: { organizationId: orgId } },
-    select: { userId: true },
+  const allAgentSettings = await aiAgentSettings.findAll();
+  const active = allAgentSettings.find((s: any) => {
+    if (!s.isActive) return false;
+    const matchingUser = allUsers.find((u: any) => u.id === s.userId && u.organizationId === orgId);
+    return !!matchingUser;
   });
 
   return NextResponse.json({
-    users,
+    users: orgUsers,
     activeAgentUserId: active?.userId || null,
   });
 }
 
 // POST /api/settings/ai-agent - set the active agent user
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   if (!session?.user)
     return NextResponse.json(
       { error: "Authentication required" },
@@ -55,10 +58,7 @@ export async function POST(req: NextRequest) {
 
   try {
     // verify user belongs to org
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true, organizationId: true },
-    });
+    const user = await users.findById(userId);
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 400 });
@@ -76,36 +76,13 @@ export async function POST(req: NextRequest) {
     );
 
     // First, deactivate all agents for this organization
-    await prisma.aIAgentSettings.updateMany({
-      where: {
-        user: { organizationId: orgId },
-      },
-      data: { isActive: false },
-    });
+    await aiAgentSettings.deactivateAll();
 
-    // Check if this user already has a settings record
-    const existingSettings = await prisma.aIAgentSettings.findFirst({
-      where: { userId },
-    });
-
-    if (existingSettings) {
-      // Update existing settings
-      await prisma.aIAgentSettings.update({
-        where: { id: existingSettings.id },
-        data: { isActive: true },
-      });
-    } else {
-      // Create new settings
-      await prisma.aIAgentSettings.create({
-        data: { userId, isActive: true },
-      });
-    }
+    // Upsert agent settings for this user
+    await aiAgentSettings.upsert(userId, { isActive: true });
 
     // Update the user's license type to AI_AGENT
-    await prisma.user.update({
-      where: { id: userId },
-      data: { licenseType: "AI_AGENT" },
-    });
+    await users.update(userId, { licenseType: "AI_AGENT" });
 
     return NextResponse.json({
       userId,

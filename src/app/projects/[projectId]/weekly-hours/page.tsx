@@ -1,11 +1,10 @@
 import React from "react";
-import { getServerSession } from "next-auth/next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import prisma from "@/lib/prisma";
+import { getSession } from "@/lib/firebase/auth";
+import { users, projects } from "@/lib/firebase/db";
 import WeeklyHoursGrid from "@/app/components/WeeklyHoursGrid";
 import { getProjectWeeklyHours } from "@/lib/actions/weeklyHours";
-import { authOptions } from "@/auth";
 
 // In Next.js 15.3.1, let's use the native shape without custom typing
 export default async function WeeklyHoursPage(props: any) {
@@ -13,24 +12,18 @@ export default async function WeeklyHoursPage(props: any) {
   const projectId = props.params.projectId;
 
   // Check authentication with proper auth options
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   if (!session?.user) {
     redirect("/auth/signin");
   }
 
   // Rest of your component remains the same
   // Get user's theme preference
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id as string },
-    select: { theme: true },
-  });
-
+  const user = await users.findById(session.user.id);
   const userTheme = user?.theme || "dark"; // Default to dark theme if not set
 
   // Fetch project data
-  const project = await prisma.project.findUnique({
-    where: { id: projectId },
-  });
+  const project = await projects.findById(projectId);
 
   if (!project) {
     return (

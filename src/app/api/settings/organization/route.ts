@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
-import prisma from "@/lib/prisma";
+import { getSession } from "@/lib/firebase/auth";
+import { organizations } from "@/lib/firebase/db";
 
 // GET /api/settings/organization - fetch the current user's organization details
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   if (!session?.user) {
     return NextResponse.json(
       { error: "Authentication required" },
@@ -21,9 +20,7 @@ export async function GET(req: NextRequest) {
   const orgId = session.user.organizationId as string;
 
   try {
-    const organization = await prisma.organization.findUnique({
-      where: { id: orgId },
-    });
+    const organization = await organizations.findById(orgId);
 
     return NextResponse.json(organization || { name: "" });
   } catch (error) {

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
-import prisma from "@/lib/prisma";
+import { getSession } from "@/lib/firebase/auth";
+import { users, organizations, aiProviderSettings } from "@/lib/firebase/db";
 import OpenAI from "openai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import Anthropic from "@anthropic-ai/sdk";
@@ -10,7 +9,7 @@ import Anthropic from "@anthropic-ai/sdk";
 export async function POST(req: NextRequest) {
   console.log("Test AI provider endpoint called");
 
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   console.log(
     "Session in test-ai:",
     JSON.stringify(
@@ -36,20 +35,7 @@ export async function POST(req: NextRequest) {
 
   // Try to get full user data directly from database to verify organizationId
   try {
-    const dbUser = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: {
-        id: true,
-        email: true,
-        organizationId: true,
-        organization: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-      },
-    });
+    const dbUser = await users.findById(session.user.id);
 
     console.log("User from database:", JSON.stringify(dbUser, null, 2));
 
@@ -86,19 +72,14 @@ export async function POST(req: NextRequest) {
           "My Organization";
         console.log("Creating organization with name:", orgName);
 
-        const organization = await prisma.organization.create({
-          data: { name: orgName },
-        });
+        const org = await organizations.create({ name: orgName });
 
         // Update the user with the new organization ID
-        await prisma.user.update({
-          where: { id: session.user.id },
-          data: { organizationId: organization.id },
-        });
+        await users.update(session.user.id, { organizationId: org.id });
 
         console.log(
           "Created organization and linked to user:",
-          organization.id
+          org.id
         );
 
         // Since we just created the organization, the user won't have AI settings yet
@@ -118,9 +99,8 @@ export async function POST(req: NextRequest) {
 
     // Get the organization's AI provider settings
     const orgId = session.user.organizationId;
-    const aiSettings = await prisma.aIProviderSettings.findFirst({
-      where: { organizationId: orgId },
-    });
+    const allSettings = await aiProviderSettings.findByOrganization(orgId);
+    const aiSettings = allSettings.length > 0 ? allSettings[0] : null;
 
     if (!aiSettings) {
       return NextResponse.json(

@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useSession } from "@/app/components/FirebaseAuthProvider";
 import { createContext, useContext, useEffect, useState } from "react";
 
 // Define the theme type

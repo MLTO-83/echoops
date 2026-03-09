@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/app/components/FirebaseAuthProvider";
 import UserAllocationChart from "./UserAllocationChart";
 import { getAllUsersWithAllocations } from "@/lib/actions/projectMember";
 import { checkAdoIntegrationStatus } from "@/lib/actions/adoSync";

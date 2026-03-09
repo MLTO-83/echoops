@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
+import { getSession } from "@/lib/firebase/auth";
+import { projects, users, projectMembers, projectWebhookConfig, adoConnections } from "@/lib/firebase/db";
 
 /**
  * GET handler to retrieve webhook config for a project
@@ -22,55 +21,41 @@ export async function GET(request: Request) {
     const includeSecret = url.searchParams.get("includeSecret") === "true";
 
     // Get user session
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // First, get the project with the related organization (via adoConnection)
-    const project = await prisma.project.findUnique({
-      where: { id: projectId },
-      include: {
-        adoConnection: {
-          include: {
-            organization: true,
-          },
-        },
-      },
-    });
+    // First, get the project
+    const project = await projects.findById(projectId);
 
     if (!project) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
+    // Get the ADO connection to check organization
+    let adoConnection = null;
+    if (project.adoConnectionId) {
+      adoConnection = await adoConnections.findById(project.adoConnectionId);
+    }
+
     // Get the current user with their organization
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: {
-        id: true,
-        organizationId: true,
-      },
-    });
+    const user = await users.findById(session.user.id);
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     // Check if user has access to this project as a member
-    const projectMember = await prisma.projectMember.findFirst({
-      where: {
-        projectId,
-        userId: user.id,
-      },
-    });
+    const member = await projectMembers.findByUserAndProject(user.id, projectId);
 
     // Check if user is an organization admin (same organization as the project)
     const isOrgAdmin =
       user.organizationId &&
-      project.adoConnection?.organizationId === user.organizationId;
+      adoConnection?.organizationId === user.organizationId;
 
     // User needs to be either a project member or an org admin
-    if (!projectMember && !isOrgAdmin) {
+    if (!member && !isOrgAdmin) {
       return NextResponse.json(
         {
           error:
@@ -81,25 +66,10 @@ export async function GET(request: Request) {
     }
 
     // Get webhook config
-    const webhookConfig = await prisma.projectWebhookConfig.findUnique({
-      where: {
-        projectId,
-      },
-      select: {
-        id: true,
-        active: true,
-        repositoryName: true,
-        agentInstructions: true,
-        description: true,
-        createdAt: true,
-        updatedAt: true,
-        // Only return the secret if explicitly requested
-        secret: includeSecret ? true : false,
-      },
-    });
+    const webhookCfg = await projectWebhookConfig.findByProject(projectId);
 
     // If no config exists yet, return an empty object with defaults
-    if (!webhookConfig) {
+    if (!webhookCfg) {
       return NextResponse.json(
         {
           active: false,
@@ -113,11 +83,22 @@ export async function GET(request: Request) {
       );
     }
 
-    // Ensure active is always returned as a boolean
-    return NextResponse.json({
-      ...webhookConfig,
-      active: Boolean(webhookConfig.active), // Explicit boolean conversion
-    });
+    // Build response, optionally excluding secret
+    const response: Record<string, unknown> = {
+      id: webhookCfg.id,
+      active: Boolean(webhookCfg.active),
+      repositoryName: webhookCfg.repositoryName,
+      agentInstructions: webhookCfg.agentInstructions,
+      description: webhookCfg.description,
+      createdAt: webhookCfg.createdAt,
+      updatedAt: webhookCfg.updatedAt,
+    };
+
+    if (includeSecret) {
+      response.secret = webhookCfg.secret || "";
+    }
+
+    return NextResponse.json(response);
   } catch (error) {
     console.error("Error retrieving webhook config:", error);
     return NextResponse.json(
@@ -142,59 +123,42 @@ export async function POST(request: Request) {
     const pathParts = url.pathname.split("/");
     const projectId = pathParts[pathParts.indexOf("projects") + 1];
 
-    // Check if secret should be included in response
-    const includeSecret = url.searchParams.get("includeSecret") === "true";
-
     // Get user session
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // First, get the project with the related organization (via adoConnection)
-    const project = await prisma.project.findUnique({
-      where: { id: projectId },
-      include: {
-        adoConnection: {
-          include: {
-            organization: true,
-          },
-        },
-      },
-    });
+    // First, get the project
+    const project = await projects.findById(projectId);
 
     if (!project) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
+    // Get the ADO connection to check organization
+    let adoConnection = null;
+    if (project.adoConnectionId) {
+      adoConnection = await adoConnections.findById(project.adoConnectionId);
+    }
+
     // Get the current user with their organization
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: {
-        id: true,
-        organizationId: true,
-      },
-    });
+    const user = await users.findById(session.user.id);
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     // Check if user has access to this project as a member
-    const projectMember = await prisma.projectMember.findFirst({
-      where: {
-        projectId,
-        userId: user.id,
-      },
-    });
+    const member = await projectMembers.findByUserAndProject(user.id, projectId);
 
     // Check if user is an organization admin (same organization as the project)
     const isOrgAdmin =
       user.organizationId &&
-      project.adoConnection?.organizationId === user.organizationId;
+      adoConnection?.organizationId === user.organizationId;
 
     // User needs to be either a project member or an org admin
-    if (!projectMember && !isOrgAdmin) {
+    if (!member && !isOrgAdmin) {
       return NextResponse.json(
         {
           error:
@@ -237,38 +201,30 @@ export async function POST(request: Request) {
       typeof normalizedActive
     );
 
+    // Check if config already exists to preserve the secret
+    const existingConfig = await projectWebhookConfig.findByProject(projectId);
+    const secret = existingConfig?.secret || generateWebhookSecret();
+
     // Create or update webhook config
-    const webhookConfig = await prisma.projectWebhookConfig.upsert({
-      where: {
-        projectId,
-      },
-      update: {
-        active: normalizedActive,
-        repositoryName: data.repositoryName,
-        agentInstructions: data.agentInstructions,
-        description: data.description,
-      },
-      create: {
-        projectId,
-        active: normalizedActive,
-        repositoryName: data.repositoryName,
-        agentInstructions: data.agentInstructions,
-        description: data.description,
-        secret: generateWebhookSecret(),
-      },
+    const webhookCfg = await projectWebhookConfig.upsert(projectId, {
+      active: normalizedActive,
+      repositoryName: data.repositoryName,
+      agentInstructions: data.agentInstructions,
+      description: data.description,
+      secret,
     });
 
     // Create response with explicit boolean conversion for active state
     return NextResponse.json({
-      id: webhookConfig.id,
-      active: Boolean(webhookConfig.active), // Ensure active is always a boolean in the response
-      repositoryName: webhookConfig.repositoryName,
-      agentInstructions: webhookConfig.agentInstructions,
-      description: webhookConfig.description,
-      createdAt: webhookConfig.createdAt,
-      updatedAt: webhookConfig.updatedAt,
+      id: webhookCfg.id,
+      active: Boolean(webhookCfg.active), // Ensure active is always a boolean in the response
+      repositoryName: webhookCfg.repositoryName,
+      agentInstructions: webhookCfg.agentInstructions,
+      description: webhookCfg.description,
+      createdAt: webhookCfg.createdAt,
+      updatedAt: webhookCfg.updatedAt,
       // Always include the secret in the POST response to ensure it's preserved across edits
-      secret: webhookConfig.secret,
+      secret: webhookCfg.secret,
     });
   } catch (error) {
     console.error("Error updating webhook config:", error);
@@ -295,53 +251,39 @@ export async function DELETE(request: Request) {
     const projectId = pathParts[pathParts.indexOf("projects") + 1];
 
     // Get user session
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // First, get the project with the related organization (via adoConnection)
-    const project = await prisma.project.findUnique({
-      where: { id: projectId },
-      include: {
-        adoConnection: {
-          include: {
-            organization: true,
-          },
-        },
-      },
-    });
+    // First, get the project
+    const project = await projects.findById(projectId);
 
     if (!project) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
+    // Get the ADO connection to check organization
+    let adoConnection = null;
+    if (project.adoConnectionId) {
+      adoConnection = await adoConnections.findById(project.adoConnectionId);
+    }
+
     // Get the current user with their organization
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: {
-        id: true,
-        organizationId: true,
-      },
-    });
+    const user = await users.findById(session.user.id);
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     // Check if user is a project OWNER
-    const isProjectOwner = await prisma.projectMember.findFirst({
-      where: {
-        projectId,
-        userId: user.id,
-        role: "OWNER", // Only owners can delete webhook config
-      },
-    });
+    const member = await projectMembers.findByUserAndProject(user.id, projectId);
+    const isProjectOwner = member && member.role === "OWNER";
 
     // Check if user is an organization admin (same organization as the project)
     const isOrgAdmin =
       user.organizationId &&
-      project.adoConnection?.organizationId === user.organizationId;
+      adoConnection?.organizationId === user.organizationId;
 
     // User needs to be either a project OWNER or an org admin
     if (!isProjectOwner && !isOrgAdmin) {
@@ -355,11 +297,7 @@ export async function DELETE(request: Request) {
     }
 
     // Delete webhook config
-    await prisma.projectWebhookConfig.delete({
-      where: {
-        projectId,
-      },
-    });
+    await projectWebhookConfig.delete(projectId);
 
     return NextResponse.json({ message: "Webhook configuration deleted" });
   } catch (error) {

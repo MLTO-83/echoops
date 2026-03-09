@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/app/components/FirebaseAuthProvider";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import TagDisplay from "@/app/components/Tags/TagDisplay";

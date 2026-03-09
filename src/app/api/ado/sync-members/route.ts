@@ -1,7 +1,15 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
-import prisma from "@/lib/prisma"; // This import path should be correct as it's the singleton wrapper
+import { getSession } from "@/lib/firebase/auth";
+import {
+  users,
+  organizations,
+  projects,
+  adoConnections,
+  projectMembers,
+  projectMemberWeeklyHours,
+  states,
+  createProjectMemberWithWeeklyHours,
+} from "@/lib/firebase/db";
 
 // Utility function to encode to Base64
 function encodeToBase64(text) {
@@ -37,13 +45,13 @@ function getCurrentWeekAndYear() {
 
 // Helper function to ensure States are seeded
 async function ensureStatesSeeded() {
-  const statesCount = await prisma.state.count();
+  const statesCount = await states.count();
 
   if (statesCount === 0) {
     log("States table is empty, seeding states...");
 
     // State definitions from project_state.md
-    const states = [
+    const stateList = [
       {
         id: "new",
         name: "New",
@@ -83,11 +91,10 @@ async function ensureStatesSeeded() {
     ];
 
     // Insert the states
-    for (const state of states) {
-      await prisma.state.upsert({
-        where: { id: state.id },
-        update: state,
-        create: state,
+    for (const state of stateList) {
+      await states.upsert(state.id, {
+        name: state.name,
+        description: state.description,
       });
     }
 
@@ -108,7 +115,7 @@ export async function POST(req) {
     }
 
     // Get the user session
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!session || !session.user) {
       log("Unauthorized access attempt");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -126,51 +133,16 @@ export async function POST(req) {
       body = {};
     }
 
-    // Check if prisma client is initialized correctly
-    try {
-      log(`Testing prisma client connection...`);
-      const testProject = await prisma.project.findFirst();
-      log(
-        `Prisma client connection test: ${
-          testProject ? "Success" : "No projects found"
-        }`
-      );
-
-      // Verify the schema by checking if ProjectMemberWeeklyHours exists
-      try {
-        await prisma.$queryRaw`SELECT EXISTS (
-          SELECT FROM information_schema.tables 
-          WHERE table_schema = 'public' 
-          AND table_name = 'ProjectMemberWeeklyHours'
-        );`;
-        log("Schema validation: ProjectMemberWeeklyHours table exists");
-      } catch (schemaErr) {
-        log("Schema validation failed", schemaErr);
-      }
-    } catch (testErr) {
-      log("ERROR: Prisma client connection test failed", testErr);
-    }
-
     // Fetch all projects with ADO connections
-    const projects = await prisma.project.findMany({
-      where: {
-        adoProjectId: {
-          not: null,
-        },
-        adoConnectionId: {
-          not: null,
-        },
-      },
-      include: {
-        adoConnection: true,
-      },
-    });
+    const allProjects = await projects.findMany({ adoProjectIdNotNull: true });
+    // Filter to only projects that have an adoConnectionId
+    const projectsWithAdo = allProjects.filter((p) => p.adoConnectionId);
 
-    log(`Found ${projects.length} projects with ADO connections`);
+    log(`Found ${projectsWithAdo.length} projects with ADO connections`);
 
-    if (projects.length === 0) {
+    if (projectsWithAdo.length === 0) {
       // Check if there are any projects at all
-      const totalProjects = await prisma.project.count();
+      const totalProjects = allProjects.length;
       if (totalProjects === 0) {
         log(
           "No projects found in the database. Please create at least one project first."
@@ -200,32 +172,25 @@ export async function POST(req) {
     }
 
     // Get current user's organization
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: { organizationId: true },
-    });
+    const user = await users.findByEmail(session.user.email as string);
 
     // Using the organizationId from the current user if available
-    const userOrgId = user?.organizationId;
+    let userOrgId = user?.organizationId;
 
     if (!userOrgId) {
       log("Current user has no organization ID");
 
       // Create organization for user if missing
-      const newOrg = await prisma.organization.create({
-        data: {
-          name: `${session.user.name || "User"}'s Organization`,
-          users: {
-            connect: { email: session.user.email },
-          },
-        },
+      const newOrg = await organizations.create({
+        name: `${session.user.name || "User"}'s Organization`,
       });
 
       // Update user with new organization ID
-      await prisma.user.update({
-        where: { email: session.user.email },
-        data: { organizationId: newOrg.id },
-      });
+      if (user) {
+        await users.update(user.id, { organizationId: newOrg.id });
+      }
+
+      userOrgId = newOrg.id;
 
       log(
         `Created new organization ${newOrg.name} (${newOrg.id}) for user ${session.user.email}`
@@ -238,29 +203,36 @@ export async function POST(req) {
 
     // Track current progress to show a meaningful response
     let currentProgress = 0;
-    const totalSteps = projects.length;
+    const totalSteps = projectsWithAdo.length;
 
     // Process each project that has ADO connection
-    for (const project of projects) {
+    for (const project of projectsWithAdo) {
       try {
         log(`Processing project: ${project.name} (${project.id})`);
         currentProgress++;
 
-        const { adoOrganizationUrl, pat } = project.adoConnection;
+        // Get the ADO connection for this project
+        const adoConnection = await adoConnections.findByOrganizationId(
+          project.adoConnectionId!
+        );
+
+        if (!adoConnection) {
+          log(`Missing ADO connection for project ${project.name}`);
+          failedProjects++;
+          continue;
+        }
+
+        const { adoOrganizationUrl, pat } = adoConnection;
 
         // Ensure the project has a valid state
         if (!project.stateId) {
-          await prisma.project.update({
-            where: { id: project.id },
-            data: { stateId: "in_progress" }, // Set a default state
-          });
+          await projects.update(project.id, { stateId: "in_progress" });
           log(
             `Updated project ${project.name} with default state 'in_progress'`
           );
         }
 
-        const effectiveOrgId =
-          userOrgId || project.adoConnection.organizationId;
+        const effectiveOrgId = userOrgId || adoConnection.organizationId;
 
         if (!adoOrganizationUrl || !pat) {
           log(`Missing ADO configuration for project ${project.name}`);
@@ -304,7 +276,7 @@ export async function POST(req) {
 
         // Step 2: For each team, fetch its members
         let projectMembersAdded = 0;
-        const processedMembers = new Set(); // To avoid duplicates
+        const processedMemberKeys = new Set(); // To avoid duplicates
 
         for (const team of teamsData.value) {
           try {
@@ -360,93 +332,73 @@ export async function POST(req) {
 
                 // Skip if already processed
                 const memberKey = `${email}-${project.id}`;
-                if (processedMembers.has(memberKey)) {
+                if (processedMemberKeys.has(memberKey)) {
                   log(`Already processed ${email} for this project, skipping`);
                   continue;
                 }
-                processedMembers.add(memberKey);
+                processedMemberKeys.add(memberKey);
 
                 log(
                   `Processing team member: ${displayName} (${email}) with ADO ID: ${adoId}`
                 );
 
                 // Step 3: Find or create user
-                let user = await prisma.user.findFirst({
-                  where: {
-                    OR: [{ email: email }, adoId ? { adoUserId: adoId } : {}],
-                  },
-                });
+                let dbUser = await users.findByEmailOrAdoUserId(email, adoId);
 
-                if (!user) {
+                if (!dbUser) {
                   log(`Creating new user for ${displayName}`);
 
                   try {
-                    user = await prisma.user.create({
-                      data: {
-                        name: displayName,
-                        email,
-                        adoUserId: adoId,
-                        image: imageUrl,
-                        organizationId: effectiveOrgId,
-                        maxHoursPerWeek: 40,
-                        theme: "dark",
-                        licenseType: "FREE",
-                      },
+                    dbUser = await users.create({
+                      name: displayName,
+                      email,
+                      adoUserId: adoId,
+                      image: imageUrl,
+                      organizationId: effectiveOrgId,
+                      maxHoursPerWeek: 40,
+                      theme: "dark",
+                      licenseType: "FREE",
                     });
-                    log(`Created user with ID: ${user.id}`);
+                    log(`Created user with ID: ${dbUser.id}`);
                   } catch (createError) {
                     log(`Error creating user: ${createError.message}`);
 
                     // Check if user was created by another concurrent process
-                    user = await prisma.user.findFirst({
-                      where: {
-                        OR: [
-                          { email: email },
-                          adoId ? { adoUserId: adoId } : {},
-                        ],
-                      },
-                    });
+                    dbUser = await users.findByEmailOrAdoUserId(email, adoId);
 
-                    if (!user) {
+                    if (!dbUser) {
                       log(
                         `Still couldn't find/create user ${displayName}, skipping`
                       );
                       continue;
                     }
 
-                    log(`Found user after error: ${user.id}`);
+                    log(`Found user after error: ${dbUser.id}`);
                   }
                 } else {
                   log(
-                    `Found existing user: ${user.name || user.email} (${
-                      user.id
+                    `Found existing user: ${dbUser.name || dbUser.email} (${
+                      dbUser.id
                     })`
                   );
 
                   // Update ADO ID if needed
-                  if (!user.adoUserId && adoId) {
-                    await prisma.user.update({
-                      where: { id: user.id },
-                      data: { adoUserId: adoId },
-                    });
-                    log(`Updated ADO ID for user ${user.id}`);
+                  if (!dbUser.adoUserId && adoId) {
+                    await users.update(dbUser.id, { adoUserId: adoId });
+                    log(`Updated ADO ID for user ${dbUser.id}`);
                   }
                 }
 
                 // Step 4: Create project member if needed
                 try {
-                  const existingMember = await prisma.projectMember.findFirst({
-                    where: {
-                      userId: user.id,
-                      projectId: project.id,
-                    },
-                    include: {
-                      weeklyHours: true,
-                    },
-                  });
+                  const existingMember =
+                    await projectMembers.findByUserAndProject(
+                      dbUser.id,
+                      project.id
+                    );
 
                   if (!existingMember) {
-                    log(`Adding user ${user.id} as project member`);
+                    log(`Adding user ${dbUser.id} as project member`);
 
                     try {
                       // Get current week and year
@@ -455,32 +407,23 @@ export async function POST(req) {
                         year: currentYear,
                       } = getCurrentWeekAndYear();
 
-                      // Default allocation hours for ADO synced members
-                      const defaultWeeklyHours = 0; // Start with 0 hours allocation by default
-
-                      // Use nested writes to create project member with weekly hours in a single operation
-                      const projectMember = await prisma.projectMember.create({
-                        data: {
-                          userId: user.id,
+                      // Create project member with weekly hours
+                      const newMember =
+                        await createProjectMemberWithWeeklyHours({
+                          userId: dbUser.id,
                           projectId: project.id,
                           role: "MEMBER",
-                          // Create weekly hours entry for the current week using nested write
-                          weeklyHours: {
-                            create: {
+                          weeklyHours: [
+                            {
                               year: currentYear,
                               weekNumber: currentWeekNumber,
-                              hours: defaultWeeklyHours,
+                              hours: 0,
                             },
-                          },
-                        },
-                        // Include the created weekly hours in the result
-                        include: {
-                          weeklyHours: true,
-                        },
-                      });
+                          ],
+                        });
 
                       log(
-                        `Created project member with ID: ${projectMember.id} and added weekly hours record`
+                        `Created project member with ID: ${newMember.id} and added weekly hours record`
                       );
                       projectMembersAdded++;
                     } catch (createError) {
@@ -494,18 +437,14 @@ export async function POST(req) {
                         log("Trying non-nested approach as fallback");
 
                         // First create project member
-                        const projectMember = await prisma.projectMember.create(
-                          {
-                            data: {
-                              userId: user.id,
-                              projectId: project.id,
-                              role: "MEMBER",
-                            },
-                          }
-                        );
+                        const newMember = await projectMembers.create({
+                          userId: dbUser.id,
+                          projectId: project.id,
+                          role: "MEMBER",
+                        });
 
                         log(
-                          `Created project member with ID: ${projectMember.id} using fallback`
+                          `Created project member with ID: ${newMember.id} using fallback`
                         );
 
                         // Then create weekly hours separately
@@ -514,17 +453,18 @@ export async function POST(req) {
                           year: currentYear,
                         } = getCurrentWeekAndYear();
 
-                        await prisma.projectMemberWeeklyHours.create({
-                          data: {
-                            projectMemberId: projectMember.id,
+                        await projectMemberWeeklyHours.upsert(
+                          project.id,
+                          dbUser.id,
+                          {
                             year: currentYear,
                             weekNumber: currentWeekNumber,
-                            hours: 0, // Default hours
-                          },
-                        });
+                            hours: 0,
+                          }
+                        );
 
                         log(
-                          `Created weekly hours for member ${projectMember.id}`
+                          `Created weekly hours for member ${newMember.id}`
                         );
                         projectMembersAdded++;
                       } catch (fallbackError) {
@@ -534,17 +474,10 @@ export async function POST(req) {
 
                         // Check if it was created by another process
                         const checkMember =
-                          await prisma.projectMember.findFirst({
-                            where: {
-                              userId: user.id,
-                              projectId: project.id,
-                            },
-                            include: {
-                              weeklyHours: {
-                                take: 1,
-                              },
-                            },
-                          });
+                          await projectMembers.findByUserAndProject(
+                            dbUser.id,
+                            project.id
+                          );
 
                         if (checkMember) {
                           log(
@@ -552,21 +485,28 @@ export async function POST(req) {
                           );
 
                           // Check if weekly hours exist, if not create them
-                          if (checkMember.weeklyHours.length === 0) {
+                          const existingHours =
+                            await projectMemberWeeklyHours.findByMember(
+                              project.id,
+                              dbUser.id
+                            );
+
+                          if (existingHours.length === 0) {
                             const {
                               weekNumber: currentWeekNumber,
                               year: currentYear,
                             } = getCurrentWeekAndYear();
 
                             try {
-                              await prisma.projectMemberWeeklyHours.create({
-                                data: {
-                                  projectMemberId: checkMember.id,
+                              await projectMemberWeeklyHours.upsert(
+                                project.id,
+                                dbUser.id,
+                                {
                                   year: currentYear,
                                   weekNumber: currentWeekNumber,
-                                  hours: 0, // Default hours
-                                },
-                              });
+                                  hours: 0,
+                                }
+                              );
                               log(
                                 `Created missing weekly hours for member ${checkMember.id}`
                               );
@@ -589,7 +529,13 @@ export async function POST(req) {
                     );
 
                     // Ensure weekly hours exist for existing members
-                    if (existingMember.weeklyHours.length === 0) {
+                    const existingHours =
+                      await projectMemberWeeklyHours.findByMember(
+                        project.id,
+                        dbUser.id
+                      );
+
+                    if (existingHours.length === 0) {
                       const {
                         weekNumber: currentWeekNumber,
                         year: currentYear,
@@ -599,14 +545,15 @@ export async function POST(req) {
                         `Creating missing weekly hours for existing member ${existingMember.id}`
                       );
                       try {
-                        await prisma.projectMemberWeeklyHours.create({
-                          data: {
-                            projectMemberId: existingMember.id,
+                        await projectMemberWeeklyHours.upsert(
+                          project.id,
+                          dbUser.id,
+                          {
                             year: currentYear,
                             weekNumber: currentWeekNumber,
-                            hours: 0, // Default hours
-                          },
-                        });
+                            hours: 0,
+                          }
+                        );
                         log(`Created weekly hours for existing member`);
                       } catch (weeklyHoursError) {
                         log(
@@ -649,25 +596,23 @@ export async function POST(req) {
     }
 
     // Get final counts for the summary
-    const projectMemberCount = await prisma.projectMember.count();
-    const userCount = await prisma.user.count();
+    // Note: In Firestore we can't easily count all project members across all projects,
+    // so we count users as a proxy
+    const userCount = await users.count();
 
     log(
       `Sync completed: Added ${totalMembersAdded} members across ${processedProjects} projects`
     );
-    log(
-      `Final counts - Project members: ${projectMemberCount}, Users: ${userCount}`
-    );
+    log(`Final counts - Users: ${userCount}`);
 
     return NextResponse.json({
       success: true,
       message: `Successfully synchronized team members for ${processedProjects} projects.`,
       stats: {
-        totalProjects: projects.length,
+        totalProjects: projectsWithAdo.length,
         processedProjects,
         failedProjects,
         totalMembersAdded,
-        totalMemberCount: projectMemberCount,
         userCount,
       },
       progress: {

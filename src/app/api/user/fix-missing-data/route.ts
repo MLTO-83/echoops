@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
-import prisma from "@/lib/prisma";
+import { getSession } from "@/lib/firebase/auth";
+import { users, projectMembers } from "@/lib/firebase/db";
 
 /**
  * This is a utility endpoint to fix users with missing name/email data
@@ -11,7 +10,7 @@ import prisma from "@/lib/prisma";
 export async function GET(req: NextRequest) {
   try {
     // Check authentication - only authenticated users can fix data
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!session?.user?.email) {
       return NextResponse.json(
         { error: "Authentication required" },
@@ -23,23 +22,27 @@ export async function GET(req: NextRequest) {
     const url = new URL(req.url);
     const projectId = url.searchParams.get("projectId");
 
-    let membersToFix = [];
-    let usersFixed = [];
+    let usersFixed: any[] = [];
 
     // If a projectId is provided, get specific members for that project
     if (projectId) {
       console.log(`Fixing members for project: ${projectId}`);
-      const projectMembers = await prisma.projectMember.findMany({
-        where: { projectId },
-        include: { user: true },
-      });
+      const members = await projectMembers.findByProject(projectId);
 
-      console.log(`Found ${projectMembers.length} members in project`);
+      console.log(`Found ${members.length} members in project`);
+
+      // Fetch user data for each member in parallel
+      const memberUsers = await Promise.all(
+        members.map(async (member: any) => {
+          const user = await users.findById(member.userId);
+          return { member, user };
+        })
+      );
 
       // Fix each member's user data
-      for (const member of projectMembers) {
+      for (const { member, user } of memberUsers) {
+        if (!user) continue;
         const timestamp = Date.now().toString().slice(-6);
-        const user = member.user;
 
         // Check if user data needs fixing
         const needsFix =
@@ -51,106 +54,77 @@ export async function GET(req: NextRequest) {
             (user.email.includes("undefined") || user.email.includes("null")));
 
         if (needsFix) {
-          const fixedUser = await prisma.user.update({
-            where: { id: user.id },
-            data: {
-              name:
-                user.name &&
-                !user.name.includes("undefined") &&
-                !user.name.includes("null")
-                  ? user.name
-                  : `Team Member ${timestamp}`,
-              email:
-                user.email &&
-                !user.email.includes("undefined") &&
-                !user.email.includes("null")
-                  ? user.email
-                  : `team-member-${timestamp}@example.com`,
-            },
-          });
+          const newName =
+            user.name &&
+            !user.name.includes("undefined") &&
+            !user.name.includes("null")
+              ? user.name
+              : `Team Member ${timestamp}`;
+          const newEmail =
+            user.email &&
+            !user.email.includes("undefined") &&
+            !user.email.includes("null")
+              ? user.email
+              : `team-member-${timestamp}@example.com`;
+
+          await users.update(user.id, { name: newName, email: newEmail });
 
           usersFixed.push({
-            id: fixedUser.id,
+            id: user.id,
             oldName: user.name,
-            newName: fixedUser.name,
+            newName,
             oldEmail: user.email,
-            newEmail: fixedUser.email,
+            newEmail,
           });
         }
       }
     } else {
       // If no projectId, fix all problematic users in the system
-      const usersWithIssues = await prisma.user.findMany({
-        where: {
-          OR: [
-            { name: null },
-            { email: null },
-            { name: { contains: "undefined" } },
-            { email: { contains: "undefined" } },
-            { name: { contains: "null" } },
-            { email: { contains: "null" } },
-            { name: { equals: "" } },
-            { email: { equals: "" } },
-          ],
-        },
+      const allUsers = await users.findMany();
+
+      const usersWithIssues = allUsers.filter((user: any) => {
+        return (
+          !user.name ||
+          !user.email ||
+          (user.name && (user.name.includes("undefined") || user.name.includes("null"))) ||
+          (user.email && (user.email.includes("undefined") || user.email.includes("null"))) ||
+          user.name === "" ||
+          user.email === ""
+        );
       });
 
       console.log(
         `Found ${usersWithIssues.length} users with missing or problematic data`
       );
 
-      // Also get users who lack critical data (broader check)
-      const incompleteUsers = await prisma.user.findMany({
-        where: {
-          OR: [{ name: { equals: "" } }, { email: { equals: "" } }],
-        },
-      });
-
-      console.log(`Found ${incompleteUsers.length} users with empty data`);
-
-      // Combine all users that need fixing (removing duplicates)
-      const allUsersToFix = [...usersWithIssues, ...incompleteUsers];
-      const uniqueUserIds = new Set();
-      const uniqueUsersToFix = [];
-
-      for (const user of allUsersToFix) {
-        if (!uniqueUserIds.has(user.id)) {
-          uniqueUserIds.add(user.id);
-          uniqueUsersToFix.push(user);
-        }
-      }
-
       // Fix each user
-      for (const user of uniqueUsersToFix) {
+      for (const user of usersWithIssues) {
         const timestamp = Date.now().toString().slice(-6);
 
         try {
-          const updatedUser = await prisma.user.update({
-            where: { id: user.id },
-            data: {
-              name:
-                user.name &&
-                !user.name.includes("undefined") &&
-                !user.name.includes("null") &&
-                user.name !== ""
-                  ? user.name
-                  : `Team Member ${timestamp}`,
-              email:
-                user.email &&
-                !user.email.includes("undefined") &&
-                !user.email.includes("null") &&
-                user.email !== ""
-                  ? user.email
-                  : `team-member-${timestamp}@example.com`,
-            },
-          });
+          const newName =
+            user.name &&
+            !user.name.includes("undefined") &&
+            !user.name.includes("null") &&
+            user.name !== ""
+              ? user.name
+              : `Team Member ${timestamp}`;
+          const newEmail =
+            user.email &&
+            !user.email.includes("undefined") &&
+            !user.email.includes("null") &&
+            user.email !== ""
+              ? user.email
+              : `team-member-${timestamp}@example.com`;
+
+          await users.update(user.id, { name: newName, email: newEmail });
 
           usersFixed.push({
-            id: updatedUser.id,
+            id: user.id,
             oldName: user.name,
-            newName: updatedUser.name,
+            newName,
             oldEmail: user.email,
-            newEmail: updatedUser.email,
+            newEmail,
           });
         } catch (updateError) {
           console.error(`Error updating user ${user.id}:`, updateError);
@@ -169,26 +143,23 @@ export async function GET(req: NextRequest) {
 
         for (const userId of idsToFix) {
           try {
-            const user = await prisma.user.findUnique({
-              where: { id: userId.trim() },
-            });
+            const user = await users.findById(userId.trim());
 
             if (user) {
               const timestamp = Date.now().toString().slice(-6);
-              const updatedUser = await prisma.user.update({
-                where: { id: userId.trim() },
-                data: {
-                  name: `Team Member ${timestamp}`,
-                  email: `team-member-${timestamp}@example.com`,
-                },
+              await users.update(user.id, {
+                name: `Team Member ${timestamp}`,
+                email: `team-member-${timestamp}@example.com`,
               });
 
+              const updatedUser = await users.findById(user.id);
+
               usersFixed.push({
-                id: updatedUser.id,
+                id: user.id,
                 oldName: user.name,
-                newName: updatedUser.name,
+                newName: updatedUser!.name,
                 oldEmail: user.email,
-                newEmail: updatedUser.email,
+                newEmail: updatedUser!.email,
               });
             }
           } catch (error) {

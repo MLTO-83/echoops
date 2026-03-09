@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactNode } from "react";
-import { SessionProvider } from "@/app/components/SessionProvider";
+import { FirebaseAuthProvider } from "@/app/components/FirebaseAuthProvider";
 import ThemeProvider from "@/app/components/ThemeProvider";
 import AppHeader from "@/app/components/AppHeader";
 
@@ -11,11 +11,11 @@ interface AppProvidersProps {
 
 export default function AppProviders({ children }: AppProvidersProps) {
   return (
-    <SessionProvider>
+    <FirebaseAuthProvider>
       <ThemeProvider>
         <AppHeader />
         <main className="min-h-screen">{children}</main>
       </ThemeProvider>
-    </SessionProvider>
+    </FirebaseAuthProvider>
   );
 }

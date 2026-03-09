@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
-import prisma from "@/lib/prisma";
+import { getSession } from "@/lib/firebase/auth";
+import { projectMembers } from "@/lib/firebase/db";
 
 // DELETE /api/projects/:projectId/members/:userId - Remove a project member
 export async function DELETE(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
 
     if (!session?.user) {
       return NextResponse.json(
@@ -21,14 +20,7 @@ export async function DELETE(req: NextRequest) {
     const userId = pathParts[pathParts.indexOf("members") + 1];
 
     // Check if the member exists
-    const member = await prisma.projectMember.findUnique({
-      where: {
-        userId_projectId: {
-          userId: userId,
-          projectId: projectId,
-        },
-      },
-    });
+    const member = await projectMembers.findByUserAndProject(userId, projectId);
 
     if (!member) {
       return NextResponse.json(
@@ -38,14 +30,7 @@ export async function DELETE(req: NextRequest) {
     }
 
     // Delete the member
-    await prisma.projectMember.delete({
-      where: {
-        userId_projectId: {
-          userId: userId,
-          projectId: projectId,
-        },
-      },
-    });
+    await projectMembers.delete(projectId, userId);
 
     return NextResponse.json({ success: true });
   } catch (error) {

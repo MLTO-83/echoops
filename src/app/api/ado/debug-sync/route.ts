@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
-import prisma from "@/lib/prisma";
+import { getSession } from "@/lib/firebase/auth";
+import { projects, projectMembers, users } from "@/lib/firebase/db";
 import { syncAzureProject } from "@/lib/actions/adoSync";
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!session?.user) {
       return NextResponse.json(
         { error: "Authentication required" },
@@ -49,9 +48,7 @@ export async function GET(req: NextRequest) {
     if (projectId) {
       console.log(`Debug sync called with local project ID: ${projectId}`);
       // Get the project with its ADO project ID
-      const project = await prisma.project.findUnique({
-        where: { id: projectId },
-      });
+      const project = await projects.findById(projectId);
 
       if (!project?.adoProjectId) {
         return NextResponse.json(
@@ -64,21 +61,26 @@ export async function GET(req: NextRequest) {
       await syncAzureProject(project.adoProjectId);
 
       // Fetch project members to return in response
-      const members = await prisma.projectMember.findMany({
-        where: { projectId },
-        include: { user: true },
-      });
+      const members = await projectMembers.findByProject(projectId);
+
+      // Enrich members with user data
+      const enrichedMembers = await Promise.all(
+        members.map(async (m) => {
+          const memberUser = await users.findById(m.userId);
+          return {
+            id: m.id,
+            role: m.role,
+            userName: memberUser?.name,
+            userEmail: memberUser?.email,
+          };
+        })
+      );
 
       return NextResponse.json({
         success: true,
         message: "Project members synced successfully",
         memberCount: members.length,
-        members: members.map((m) => ({
-          id: m.id,
-          role: m.role,
-          userName: m.user.name,
-          userEmail: m.user.email,
-        })),
+        members: enrichedMembers,
       });
     }
   } catch (error) {

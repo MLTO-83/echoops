@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
+import { getSession } from "@/lib/firebase/auth";
 
 /**
  * Debug endpoint that echos request info for troubleshooting
@@ -8,7 +7,7 @@ import { authOptions } from "@/auth";
 export async function POST(req: NextRequest) {
   try {
     // Check authentication
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!session?.user) {
       return NextResponse.json(
         { error: "Authentication required" },

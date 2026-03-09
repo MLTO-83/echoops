@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Session } from "next-auth";
 import Image from "next/image";
 
 interface WelcomeModalProps {
-  session: Session | null;
+  session: { user: { id: string; name?: string | null; email?: string | null; image?: string | null } } | null;
   isFirstLogin?: boolean;
 }
 

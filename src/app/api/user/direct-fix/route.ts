@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
-import prisma from "@/lib/prisma";
+import { getSession } from "@/lib/firebase/auth";
+import { users, projectMembers } from "@/lib/firebase/db";
 
 /**
  * This endpoint creates or updates user information based on
@@ -10,7 +9,7 @@ import prisma from "@/lib/prisma";
 export async function GET(req: NextRequest) {
   try {
     // Check authentication
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!session?.user?.email) {
       return NextResponse.json(
         { error: "Authentication required" },
@@ -34,12 +33,17 @@ export async function GET(req: NextRequest) {
     console.log(`Running direct fix for project ${projectId}`);
 
     // Get all existing members for the project
-    const projectMembers = await prisma.projectMember.findMany({
-      where: { projectId },
-      include: { user: true },
-    });
+    const members = await projectMembers.findByProject(projectId);
 
-    console.log(`Found ${projectMembers.length} members to check`);
+    // Fetch user data for each member in parallel
+    const membersWithUsers = await Promise.all(
+      members.map(async (member: any) => {
+        const user = await users.findById(member.userId);
+        return { ...member, user };
+      })
+    );
+
+    console.log(`Found ${membersWithUsers.length} members to check`);
 
     // The correct user data from Azure DevOps
     const correctUserData = [
@@ -56,30 +60,31 @@ export async function GET(req: NextRequest) {
     const updatedUsers = [];
 
     // For each member, find the closest match and update
-    for (let i = 0; i < projectMembers.length; i++) {
+    for (let i = 0; i < membersWithUsers.length; i++) {
       if (i < correctUserData.length) {
-        const member = projectMembers[i];
+        const member = membersWithUsers[i];
         const correctData = correctUserData[i];
+
+        if (!member.user) continue;
 
         console.log(
           `Updating user ${member.user.id} with name: ${correctData.name}, email: ${correctData.email}`
         );
 
         try {
-          const updatedUser = await prisma.user.update({
-            where: { id: member.user.id },
-            data: {
-              name: correctData.name,
-              email: correctData.email,
-            },
+          await users.update(member.user.id, {
+            name: correctData.name,
+            email: correctData.email,
           });
 
+          const updatedUser = await users.findById(member.user.id);
+
           updatedUsers.push({
-            id: updatedUser.id,
+            id: member.user.id,
             oldName: member.user.name,
             oldEmail: member.user.email,
-            newName: updatedUser.name,
-            newEmail: updatedUser.email,
+            newName: updatedUser!.name,
+            newEmail: updatedUser!.email,
           });
         } catch (err) {
           console.error(`Error updating user ${member.user.id}:`, err);
@@ -111,7 +116,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     // Check authentication
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!session?.user?.email) {
       return NextResponse.json(
         { error: "Authentication required" },
@@ -179,23 +184,18 @@ export async function POST(req: NextRequest) {
     }
 
     // Try to find an existing user by email first
-    let user = await prisma.user.findUnique({
-      where: { email },
-    });
+    let user = await users.findByEmail(email);
 
     // If not found by email and adoUserId is provided, try to find by adoUserId
-    // Use a try/catch to handle the case where adoUserId might not be in the schema yet
     if (!user && adoUserId) {
       try {
-        user = await prisma.user.findFirst({
-          where: { adoUserId },
-        });
+        const allUsers = await users.findMany();
+        user = allUsers.find((u: any) => u.adoUserId === adoUserId) || null;
       } catch (err) {
         console.warn(
-          "Could not query by adoUserId, field might not be available yet:",
+          "Could not query by adoUserId:",
           err
         );
-        // Continue without error, we'll just create based on email
       }
     }
 
@@ -211,33 +211,17 @@ export async function POST(req: NextRequest) {
       // Special case for image which can be explicitly set to null
       if (image !== undefined) updateData.image = image;
 
-      // Only try to update adoUserId if the field exists in the schema
+      // Include adoUserId if provided
       if (adoUserId) {
-        try {
-          // Check if adoUserId field exists by doing a simple query
-          await prisma.user.findFirst({
-            where: { adoUserId: "" },
-            select: { id: true },
-          });
-
-          // If we get here, the field exists and we can include it in the update
-          updateData.adoUserId = adoUserId;
-        } catch (err) {
-          console.warn(
-            "Could not update adoUserId, field might not be available yet:",
-            err
-          );
-        }
+        updateData.adoUserId = adoUserId;
       }
 
       // Only update if we have data to update
       if (Object.keys(updateData).length > 0) {
         try {
-          user = await prisma.user.update({
-            where: { id: user.id },
-            data: updateData,
-          });
-          console.log(`Updated user: ${user.id}`);
+          await users.update(user.id, updateData);
+          user = await users.findById(user.id);
+          console.log(`Updated user: ${user!.id}`);
         } catch (err) {
           console.error("Error updating user:", err);
         }
@@ -255,37 +239,21 @@ export async function POST(req: NextRequest) {
         image,
       };
 
-      // Only include adoUserId if the field is available
+      // Include adoUserId if provided
       if (adoUserId) {
-        try {
-          // Check if adoUserId field exists by doing a simple query
-          await prisma.user.findFirst({
-            where: { adoUserId: "" },
-            select: { id: true },
-          });
-
-          // If we get here, the field exists and we can include it
-          userData.adoUserId = adoUserId;
-        } catch (err) {
-          console.warn(
-            "Could not include adoUserId in creation, field might not be available yet:",
-            err
-          );
-        }
+        userData.adoUserId = adoUserId;
       }
 
-      user = await prisma.user.create({
-        data: userData,
-      });
+      user = await users.create(userData);
       console.log(`Created new user: ${user.id}`);
     }
 
     return NextResponse.json({
       success: true,
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      image: user.image,
+      id: user!.id,
+      name: user!.name,
+      email: user!.email,
+      image: user!.image,
       adoUserId: (user as any).adoUserId,
     });
   } catch (error) {

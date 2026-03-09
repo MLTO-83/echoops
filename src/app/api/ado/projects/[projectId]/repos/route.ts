@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
-import prisma from "@/lib/prisma";
+import { getSession } from "@/lib/firebase/auth";
+import { projects, adoConnections } from "@/lib/firebase/db";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -14,7 +13,7 @@ export const runtime = "nodejs";
 export async function GET(request: NextRequest) {
   try {
     // Check authentication - only requirement is that user is logged in
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!session?.user) {
       return NextResponse.json(
         { error: "Authentication required" },
@@ -36,16 +35,10 @@ export async function GET(request: NextRequest) {
     // Get the project to find the ADO project name - no membership check is done
     // This allows any authenticated user to access the repo list, even if they're not a project member
     // Try to find by both local project ID and ADO project ID to be more flexible
-    const project = await prisma.project.findFirst({
-      where: {
-        OR: [{ id: projectId }, { adoProjectId: projectId }],
-      },
-      include: {
-        adoConnection: {
-          include: { organization: true },
-        },
-      },
-    });
+    let project = await projects.findById(projectId);
+    if (!project) {
+      project = await projects.findByAdoProjectId(projectId);
+    }
 
     if (!project) {
       console.error(`Project not found for ID: ${projectId}`);
@@ -58,7 +51,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (!project.adoConnection) {
+    if (!project.adoConnectionId) {
       return NextResponse.json(
         { error: "Project does not have an ADO connection configured" },
         { status: 400 }
@@ -66,7 +59,16 @@ export async function GET(request: NextRequest) {
     }
 
     // Get ADO connection details to make the API call
-    const adoConnection = project.adoConnection;
+    const adoConnection = await adoConnections.findByOrganizationId(
+      project.adoConnectionId
+    );
+
+    if (!adoConnection) {
+      return NextResponse.json(
+        { error: "Project does not have an ADO connection configured" },
+        { status: 400 }
+      );
+    }
 
     // Use adoProjectId instead of adoProjectName (which doesn't exist in the schema)
     // Fall back to the project name if adoProjectId is not available

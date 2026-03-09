@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
+import { getSession } from "@/lib/firebase/auth";
 
 // Initialize Resend with API key from environment variables
 const resendApiKey =
@@ -22,7 +21,7 @@ const resend = new Resend(resendApiKey);
 export async function POST(req: NextRequest) {
   try {
     // Check authentication first
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!session?.user) {
       return NextResponse.json(
         { error: "Authentication required" },

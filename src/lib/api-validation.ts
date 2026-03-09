@@ -2,7 +2,7 @@
  * API validation utilities to ensure data consistency across API routes
  */
 
-import prisma from "./prisma";
+import { users, projects, adoConnections, projectMembers, projectMemberWeeklyHours } from "./firebase/db";
 import { getCurrentWeekAndYear } from "./date-utils";
 
 /**
@@ -24,10 +24,7 @@ export class ApiValidationError extends Error {
  * @throws ApiValidationError if validation fails
  */
 export async function validateUserExists(userId: string): Promise<void> {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { id: true },
-  });
+  const user = await users.findById(userId);
 
   if (!user) {
     throw new ApiValidationError(`User with ID ${userId} not found`, 404);
@@ -40,10 +37,7 @@ export async function validateUserExists(userId: string): Promise<void> {
  * @throws ApiValidationError if validation fails
  */
 export async function validateProjectExists(projectId: string): Promise<void> {
-  const project = await prisma.project.findUnique({
-    where: { id: projectId },
-    select: { id: true },
-  });
+  const project = await projects.findById(projectId);
 
   if (!project) {
     throw new ApiValidationError(`Project with ID ${projectId} not found`, 404);
@@ -58,41 +52,38 @@ export async function validateProjectExists(projectId: string): Promise<void> {
 export async function ensureWeeklyHoursExists(projectMemberId: string) {
   const { year, weekNumber } = getCurrentWeekAndYear();
 
+  // Find the member by memberId to get projectId and userId
+  const member = await projectMembers.findByMemberId(projectMemberId);
+  if (!member) return null;
+
   // Check if weekly hours entry already exists
-  const existingHours = await prisma.projectMemberWeeklyHours.findUnique({
-    where: {
-      projectMemberId_year_weekNumber: {
-        projectMemberId,
-        year,
-        weekNumber,
-      },
-    },
-  });
+  const existingHours = await projectMemberWeeklyHours.findOne(
+    member.projectId,
+    member.userId,
+    year,
+    weekNumber
+  );
 
   if (existingHours) {
     return existingHours;
   }
 
   // Create new weekly hours entry with 0 hours
-  return prisma.projectMemberWeeklyHours.create({
-    data: {
-      projectMemberId,
-      year,
-      weekNumber,
-      hours: 0,
-    },
+  return projectMemberWeeklyHours.upsert(member.projectId, member.userId, {
+    year,
+    weekNumber,
+    hours: 0,
+    projectMemberId,
   });
 }
 
 /**
  * Validate ADO connection exists and is properly configured
- * @param connectionId The ADO connection ID
+ * @param connectionId The ADO connection ID (which is the organizationId)
  * @throws ApiValidationError if validation fails
  */
 export async function validateADOConnection(connectionId: string) {
-  const connection = await prisma.aDOConnection.findUnique({
-    where: { id: connectionId },
-  });
+  const connection = await adoConnections.findByOrganizationId(connectionId);
 
   if (!connection) {
     throw new ApiValidationError(
@@ -117,12 +108,7 @@ export async function validateADOConnection(connectionId: string) {
  * @throws ApiValidationError if validation fails
  */
 export async function validateADOProject(projectId: string) {
-  const project = await prisma.project.findUnique({
-    where: { id: projectId },
-    include: {
-      adoConnection: true,
-    },
-  });
+  const project = await projects.findById(projectId);
 
   if (!project) {
     throw new ApiValidationError(`Project with ID ${projectId} not found`, 404);
@@ -135,12 +121,20 @@ export async function validateADOProject(projectId: string) {
     );
   }
 
-  if (!project.adoConnectionId || !project.adoConnection) {
+  if (!project.adoConnectionId) {
     throw new ApiValidationError(
       `Project with ID ${projectId} has no ADO connection`,
       400
     );
   }
 
-  return project;
+  const adoConnection = await adoConnections.findByOrganizationId(project.adoConnectionId);
+  if (!adoConnection) {
+    throw new ApiValidationError(
+      `Project with ID ${projectId} has no ADO connection`,
+      400
+    );
+  }
+
+  return { ...project, adoConnection };
 }

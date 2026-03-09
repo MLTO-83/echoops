@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
-import prisma from "@/lib/prisma";
+import { getSession } from "@/lib/firebase/auth";
+import { users, adoConnections } from "@/lib/firebase/db";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -11,7 +10,7 @@ export const runtime = "nodejs";
  */
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!session?.user) {
       return NextResponse.json(
         { error: "Authentication required" },
@@ -25,10 +24,7 @@ export async function GET(req: NextRequest) {
     const teamId = pathParts[pathParts.indexOf("teams") + 1];
 
     // Get user with organization
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email as string },
-      select: { organizationId: true },
-    });
+    const user = await users.findByEmail(session.user.email as string);
 
     if (!user || !user.organizationId) {
       return NextResponse.json(
@@ -38,9 +34,9 @@ export async function GET(req: NextRequest) {
     }
 
     // Get the ADO connection details
-    const adoConnection = await prisma.aDOConnection.findUnique({
-      where: { organizationId: user.organizationId },
-    });
+    const adoConnection = await adoConnections.findByOrganizationId(
+      user.organizationId
+    );
 
     if (!adoConnection) {
       return NextResponse.json(
@@ -96,31 +92,24 @@ export async function GET(req: NextRequest) {
 
       // Check for any already synced members in our database
       const adoUserIds = members
-        .map((m) => m.id)
-        .filter((id) => id !== undefined && id !== null);
+        .map((m: any) => m.id)
+        .filter((id: any) => id !== undefined && id !== null);
 
-      const existingUsers = await prisma.user.findMany({
-        where: {
-          adoUserId: {
-            in: adoUserIds,
-          },
-        },
-        select: {
-          id: true,
-          adoUserId: true,
-        },
-      });
+      // Look up existing users by ADO user IDs
+      const existingUserResults = await Promise.all(
+        adoUserIds.map((adoUserId: string) => users.findByAdoUserId(adoUserId))
+      );
 
       // Map ADO user IDs to our database user IDs
-      const adoToDbUserMap = {};
-      existingUsers.forEach((user) => {
-        if (user.adoUserId) {
-          adoToDbUserMap[user.adoUserId] = user.id;
+      const adoToDbUserMap: Record<string, string> = {};
+      existingUserResults.forEach((foundUser) => {
+        if (foundUser && foundUser.adoUserId) {
+          adoToDbUserMap[foundUser.adoUserId] = foundUser.id;
         }
       });
 
       // Add our database IDs to the response if available
-      const enrichedMembers = members.map((member) => ({
+      const enrichedMembers = members.map((member: any) => ({
         ...member,
         dbUserId: member.id ? adoToDbUserMap[member.id] : undefined,
         isSynced: member.id ? !!adoToDbUserMap[member.id] : false,

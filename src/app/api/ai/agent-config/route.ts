@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
-import prisma from "@/lib/prisma";
+import { getSession } from "@/lib/firebase/auth";
+import { users, organizations, aiAgentJobs } from "@/lib/firebase/db";
 
 /**
  * POST /api/ai/agent-config - Save AI agent configuration without executing immediately
@@ -9,7 +8,7 @@ import prisma from "@/lib/prisma";
  */
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!session?.user) {
       return NextResponse.json(
         { error: "Authentication required" },
@@ -30,12 +29,17 @@ export async function POST(req: NextRequest) {
     }
 
     // Get the user's organization
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email as string },
-      include: { organization: true },
-    });
+    const user = await users.findByEmail(session.user.email as string);
 
-    if (!user || !user.organization) {
+    if (!user || !user.organizationId) {
+      return NextResponse.json(
+        { error: "User not associated with an organization" },
+        { status: 400 }
+      );
+    }
+
+    const organization = await organizations.findById(user.organizationId);
+    if (!organization) {
       return NextResponse.json(
         { error: "User not associated with an organization" },
         { status: 400 }
@@ -47,17 +51,13 @@ export async function POST(req: NextRequest) {
 
     // Create a record of this configuration with "CONFIGURED" status
     // This indicates it's ready to be picked up by the webhook
-    const configEntry = await prisma.aIAgentJob.create({
-      data: {
-        prompt,
-        repositoryName,
-        status: "CONFIGURED", // Special status to indicate waiting for webhook trigger
-        project: {
-          connect: { id: projectId },
-        },
-        adoWorkItemType: adoWorkItemType, // Store the model name for later use
-        adoWorkItemTitle: "Waiting for work item assignment", // Descriptive status
-      },
+    const configEntry = await aiAgentJobs.create({
+      projectId,
+      prompt,
+      repositoryName,
+      status: "CONFIGURED", // Special status to indicate waiting for webhook trigger
+      adoWorkItemType: adoWorkItemType, // Store the model name for later use
+      adoWorkItemTitle: "Waiting for work item assignment", // Descriptive status
     });
 
     // Return success response with the configuration ID

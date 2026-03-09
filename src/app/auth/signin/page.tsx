@@ -1,15 +1,27 @@
 "use client";
 
-import { signIn } from "next-auth/react";
-import { useSearchParams } from "next/navigation";
+import { signInWithPopup } from "firebase/auth";
+import { auth, githubProvider } from "@/lib/firebase/client";
+import { useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
 
 function SignInContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
   const error = searchParams.get("error");
+
+  const handleSignIn = async () => {
+    try {
+      await signInWithPopup(auth, githubProvider);
+      router.push(callbackUrl);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Authentication failed";
+      router.push(`/auth/error?error=${encodeURIComponent(errorMessage)}`);
+    }
+  };
 
   return (
     <div className="flex min-h-screen flex-col items-center p-6 md:p-12">
@@ -74,7 +86,7 @@ function SignInContent() {
                 </div>
 
                 <button
-                  onClick={() => signIn("github", { callbackUrl })}
+                  onClick={handleSignIn}
                   className="button-primary w-full flex items-center justify-center px-4 py-3 transition-all duration-200"
                 >
                   <svg

@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
-import prisma from "@/lib/prisma";
+import { getSession } from "@/lib/firebase/auth";
+import { states } from "@/lib/firebase/db";
 
 // State definitions from project_state.md
-const states = [
+const stateDefinitions = [
   {
     id: "new",
     name: "New",
@@ -49,14 +48,12 @@ const states = [
 export async function GET(req: NextRequest) {
   try {
     // Allow public access to this endpoint for read-only operations
-    const existingStates = await prisma.state.findMany({
-      orderBy: { name: "asc" },
-    });
+    const existingStates = await states.findMany();
 
     // If no states exist in the database, return the default states
     if (existingStates.length === 0) {
       return NextResponse.json({
-        states: states,
+        states: stateDefinitions,
         message:
           "No states found in database. Returning default states that would be used for seeding.",
       });
@@ -83,7 +80,7 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -93,21 +90,14 @@ export async function POST(req: NextRequest) {
     let updated = 0;
 
     // Upsert each state
-    for (const state of states) {
-      const existing = await prisma.state.findUnique({
-        where: { id: state.id },
-      });
+    for (const state of stateDefinitions) {
+      const existing = await states.findById(state.id);
 
       if (existing) {
-        await prisma.state.update({
-          where: { id: state.id },
-          data: state,
-        });
+        await states.upsert(state.id, { name: state.name, description: state.description });
         updated++;
       } else {
-        await prisma.state.create({
-          data: state,
-        });
+        await states.upsert(state.id, { name: state.name, description: state.description });
         created++;
       }
     }

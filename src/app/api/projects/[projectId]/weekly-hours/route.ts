@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import prisma from "@/lib/prisma";
+import { getSession } from "@/lib/firebase/auth";
+import { projectMembers } from "@/lib/firebase/db";
 import {
   getProjectWeeklyHours,
   setWeeklyHours,
   setBulkWeeklyHours,
 } from "@/lib/actions/weeklyHours";
-import { authOptions } from "@/auth";
 
 // Get weekly hours for all members in a project
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -41,7 +40,7 @@ export async function GET(req: NextRequest) {
 // Set hours for a specific week for a project member
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -66,14 +65,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify the project member belongs to this project
-    const projectMember = await prisma.projectMember.findFirst({
-      where: {
-        id: projectMemberId,
-        projectId,
-      },
-    });
+    const member = await projectMembers.findByMemberId(projectMemberId);
 
-    if (!projectMember) {
+    if (!member || member.projectId !== projectId) {
       return NextResponse.json(
         { error: "Project member not found in this project" },
         { status: 404 }
@@ -103,7 +97,7 @@ export async function POST(req: NextRequest) {
 // Set hours for multiple weeks at once
 export async function PUT(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -128,14 +122,9 @@ export async function PUT(req: NextRequest) {
     }
 
     // Verify the project member belongs to this project
-    const projectMember = await prisma.projectMember.findFirst({
-      where: {
-        id: projectMemberId,
-        projectId,
-      },
-    });
+    const member = await projectMembers.findByMemberId(projectMemberId);
 
-    if (!projectMember) {
+    if (!member || member.projectId !== projectId) {
       return NextResponse.json(
         { error: "Project member not found in this project" },
         { status: 404 }

@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
-import prisma from "@/lib/prisma";
+import { getSession } from "@/lib/firebase/auth";
+import { projects, users, projectMembers, adoConnections } from "@/lib/firebase/db";
 
 /**
  * GET /api/projects/ado/[projectId] - Get details of a specific project from ADO and local database
  */
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!session?.user) {
       return NextResponse.json(
         { error: "Authentication required" },
@@ -21,17 +20,7 @@ export async function GET(req: NextRequest) {
     const projectId = pathParts[pathParts.indexOf("ado") + 1];
 
     // First, check if the project exists in our database
-    const localProject = await prisma.project.findFirst({
-      where: { adoProjectId: projectId },
-      include: {
-        state: true,
-        members: {
-          include: {
-            user: true,
-          },
-        },
-      },
-    });
+    const localProject = await projects.findByAdoProjectId(projectId);
 
     // If we don't have the project in our database, we'll return a minimal response
     if (!localProject) {
@@ -41,17 +30,29 @@ export async function GET(req: NextRequest) {
       });
     }
 
+    // Fetch members for the project
+    const members = await projectMembers.findByProject(localProject.id);
+    const membersWithUsers = await Promise.all(
+      members.map(async (member) => {
+        const memberUser = await users.findById(member.userId);
+        return { ...member, user: memberUser };
+      })
+    );
+
+    const projectWithMembers = {
+      ...localProject,
+      members: membersWithUsers,
+      state: null, // State would need separate lookup
+    };
+
     // Get user's organization
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email as string },
-      select: { organizationId: true },
-    });
+    const user = await users.findByEmail(session.user.email as string);
 
     if (!user || !user.organizationId) {
       return NextResponse.json(
         {
           exists: true,
-          project: localProject,
+          project: projectWithMembers,
           adoDetails: null,
           message: "User not associated with an organization",
         },
@@ -60,15 +61,13 @@ export async function GET(req: NextRequest) {
     }
 
     // Get ADO connection details
-    const adoConnection = await prisma.aDOConnection.findUnique({
-      where: { organizationId: user.organizationId },
-    });
+    const adoConnection = await adoConnections.findByOrganizationId(user.organizationId);
 
     if (!adoConnection) {
       return NextResponse.json(
         {
           exists: true,
-          project: localProject,
+          project: projectWithMembers,
           adoDetails: null,
           message: "No ADO connection configured",
         },
@@ -101,7 +100,7 @@ export async function GET(req: NextRequest) {
         return NextResponse.json(
           {
             exists: true,
-            project: localProject,
+            project: projectWithMembers,
             adoDetails: null,
             error: `Failed to fetch ADO details: ${response.statusText}`,
           },
@@ -114,7 +113,7 @@ export async function GET(req: NextRequest) {
       // Format the response with both local and ADO details
       return NextResponse.json({
         exists: true,
-        project: localProject,
+        project: projectWithMembers,
         adoDetails: {
           id: adoProject.id,
           name: adoProject.name,
@@ -132,7 +131,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(
         {
           exists: true,
-          project: localProject,
+          project: projectWithMembers,
           adoDetails: null,
           error: "Failed to communicate with Azure DevOps API",
         },

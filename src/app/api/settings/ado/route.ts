@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
-import prisma from "@/lib/prisma";
+import { getSession } from "@/lib/firebase/auth";
+import { users, organizations, adoConnections } from "@/lib/firebase/db";
 
 /**
  * GET /api/settings/ado - Get ADO connection details
  */
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!session?.user) {
       return NextResponse.json(
         { error: "Authentication required" },
@@ -17,10 +16,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Get user with organization
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email as string },
-      select: { organizationId: true },
-    });
+    const user = await users.findByEmail(session.user.email as string);
 
     if (!user || !user.organizationId) {
       return NextResponse.json(
@@ -30,9 +26,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Get ADO connection details
-    const adoConnection = await prisma.aDOConnection.findUnique({
-      where: { organizationId: user.organizationId },
-    });
+    const adoConnection = await adoConnections.findByOrganizationId(user.organizationId);
 
     if (!adoConnection) {
       return NextResponse.json(
@@ -60,7 +54,7 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!session?.user) {
       return NextResponse.json(
         { error: "Authentication required" },
@@ -89,10 +83,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Get user with organization
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email as string },
-      select: { id: true, organizationId: true },
-    });
+    const user = await users.findByEmail(session.user.email as string);
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -101,46 +92,30 @@ export async function POST(req: NextRequest) {
     // Create organization if user doesn't have one
     let organizationId = user.organizationId;
     if (!organizationId) {
-      const organization = await prisma.organization.create({
-        data: {
-          name: "My Organization", // Default name, user can update it later
-          users: {
-            connect: { id: user.id },
-          },
-        },
+      const org = await organizations.create({
+        name: "My Organization", // Default name, user can update it later
       });
-      organizationId = organization.id;
+      organizationId = org.id;
 
       // Update user with the organization ID
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { organizationId },
-      });
+      await users.update(user.id, { organizationId });
     }
 
     // Upsert ADO connection
-    const adoConnection = await prisma.aDOConnection.upsert({
-      where: { organizationId },
-      update: {
-        adoOrganizationUrl: formattedUrl,
-        pat,
-      },
-      create: {
-        adoOrganizationUrl: formattedUrl,
-        pat,
-        organization: {
-          connect: { id: organizationId },
-        },
-      },
+    await adoConnections.upsert(organizationId, {
+      adoOrganizationUrl: formattedUrl,
+      pat,
     });
+
+    const adoConnection = await adoConnections.findByOrganizationId(organizationId);
 
     return NextResponse.json({
       success: true,
       message: "ADO connection details saved successfully",
       adoConnection: {
-        id: adoConnection.id,
-        adoOrganizationUrl: adoConnection.adoOrganizationUrl,
-        patConfigured: Boolean(adoConnection.pat),
+        id: adoConnection!.id,
+        adoOrganizationUrl: adoConnection!.adoOrganizationUrl,
+        patConfigured: Boolean(adoConnection!.pat),
       },
     });
   } catch (error) {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
-import { getServerSession } from "next-auth";
+import { getSession } from "@/lib/firebase/auth";
+import { projectMembers, projectMemberWeeklyHours } from "@/lib/firebase/db";
 import {
   updateProjectMemberWeeklyHours,
   setUniformWeeklyHours,
@@ -11,7 +11,7 @@ import {
  */
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await getSession();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -22,15 +22,10 @@ export async function GET(request: NextRequest) {
     const userId = pathParts[pathParts.indexOf("members") + 1];
 
     // Find the project member
-    const projectMember = await prisma.projectMember.findFirst({
-      where: {
-        projectId,
-        userId,
-      },
-      include: {
-        weeklyHours: true,
-      },
-    });
+    const projectMember = await projectMembers.findByUserAndProject(
+      userId,
+      projectId
+    );
 
     if (!projectMember) {
       return NextResponse.json(
@@ -45,9 +40,11 @@ export async function GET(request: NextRequest) {
       ? parseInt(url.searchParams.get("year") as string)
       : new Date().getFullYear();
 
-    // Filter weekly hours by year if specified
-    const weeklyHours = projectMember.weeklyHours.filter(
-      (wh) => wh.year === year
+    // Fetch weekly hours filtered by year
+    const weeklyHours = await projectMemberWeeklyHours.findByMember(
+      projectId,
+      userId,
+      { year }
     );
 
     return NextResponse.json({ weeklyHours });
@@ -65,7 +62,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await getSession();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -78,12 +75,10 @@ export async function POST(request: NextRequest) {
     const data = await request.json();
 
     // Find the project member
-    const projectMember = await prisma.projectMember.findFirst({
-      where: {
-        projectId,
-        userId,
-      },
-    });
+    const projectMember = await projectMembers.findByUserAndProject(
+      userId,
+      projectId
+    );
 
     if (!projectMember) {
       return NextResponse.json(
@@ -109,7 +104,7 @@ export async function POST(request: NextRequest) {
       }
 
       const result = await setUniformWeeklyHours(
-        projectMember.id,
+        `${projectMember.userId}_${projectMember.projectId}`,
         hours,
         startWeek,
         endWeek,
@@ -129,7 +124,7 @@ export async function POST(request: NextRequest) {
       }
 
       const result = await updateProjectMemberWeeklyHours(
-        projectMember.id,
+        `${projectMember.userId}_${projectMember.projectId}`,
         weeklyHours
       );
 

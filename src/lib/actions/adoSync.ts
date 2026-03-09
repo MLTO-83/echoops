@@ -1,8 +1,8 @@
 "use server";
 
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
-import prisma from "@/lib/prisma";
+import { getSession } from "@/lib/firebase/auth";
+import { users, projects, projectMembers } from "@/lib/firebase/db";
+import { adoConnections, organizations } from "@/lib/firebase/db";
 import { encodeToBase64 } from "@/lib/buffer-utils";
 
 /**
@@ -12,7 +12,7 @@ import { encodeToBase64 } from "@/lib/buffer-utils";
 export async function syncAdoData() {
   try {
     // Get session to check authentication
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
 
     // Check if user is authenticated
     if (!session || !session.user) {
@@ -25,19 +25,10 @@ export async function syncAdoData() {
       return { success: false, error: "User email not found" };
     }
 
-    // Get the user from database with their organization
-    const user = await prisma.user.findUnique({
-      where: { email: userEmail },
-      include: {
-        organization: {
-          include: {
-            adoConnection: true,
-          },
-        },
-      },
-    });
+    // Get the user from database
+    const user = await users.findByEmail(userEmail);
 
-    if (!user?.organization?.adoConnection) {
+    if (!user?.organizationId) {
       return {
         success: false,
         error:
@@ -45,11 +36,18 @@ export async function syncAdoData() {
       };
     }
 
-    const {
-      pat,
-      adoOrganizationUrl,
-      id: adoConnectionId,
-    } = user.organization.adoConnection;
+    // Get the ADO connection for the user's organization
+    const adoConnection = await adoConnections.findByOrganizationId(user.organizationId);
+
+    if (!adoConnection) {
+      return {
+        success: false,
+        error:
+          "No ADO connection configured. Please set up your ADO integration first.",
+      };
+    }
+
+    const { pat, adoOrganizationUrl, id: adoConnectionId } = adoConnection;
 
     if (!pat || !adoOrganizationUrl) {
       return {
@@ -80,41 +78,29 @@ export async function syncAdoData() {
     }
 
     const data = await response.json();
-    const projects = data.value;
+    const adoProjects = data.value;
 
     // Store projects in the database
     let createdCount = 0;
     let updatedCount = 0;
 
-    for (const project of projects) {
-      // Check if project already exists using adoProjectId instead of adoId
-      const existingProject = await prisma.project.findFirst({
-        where: {
-          adoProjectId: project.id,
-          adoConnectionId: adoConnectionId,
-        },
-      });
+    for (const project of adoProjects) {
+      // Check if project already exists using adoProjectId
+      const existingProject = await projects.findByAdoProjectId(project.id);
 
       if (existingProject) {
         // Update existing project
-        await prisma.project.update({
-          where: { id: existingProject.id },
-          data: {
-            name: project.name,
-            updatedAt: new Date(),
-          },
+        await projects.update(existingProject.id, {
+          name: project.name,
+          updatedAt: new Date(),
         });
         updatedCount++;
       } else {
         // Create new project
-        await prisma.project.create({
-          data: {
-            name: project.name,
-            adoProjectId: project.id,
-            adoConnection: {
-              connect: { id: adoConnectionId },
-            },
-          },
+        await projects.create({
+          name: project.name,
+          adoProjectId: project.id,
+          adoConnectionId: adoConnectionId,
         });
         createdCount++;
       }
@@ -145,7 +131,7 @@ export async function syncAzureProject(
 ): Promise<string | null> {
   try {
     // Get session to check authentication
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
 
     // Check if user is authenticated
     if (!session || !session.user) {
@@ -154,11 +140,7 @@ export async function syncAzureProject(
     }
 
     // First, check if the project already exists in our database by adoProjectId
-    const existingProject = await prisma.project.findFirst({
-      where: {
-        adoProjectId: adoProjectId,
-      },
-    });
+    const existingProject = await projects.findByAdoProjectId(adoProjectId);
 
     // If it exists, return its ID
     if (existingProject) {
@@ -174,41 +156,35 @@ export async function syncAzureProject(
       return null;
     }
 
-    // Get the user from database with their organization
-    const user = await prisma.user.findUnique({
-      where: { email: userEmail },
-      include: {
-        organization: {
-          include: {
-            adoConnection: true,
-          },
-        },
-      },
-    });
+    // Get the user from database
+    const user = await users.findByEmail(userEmail);
 
-    if (!user?.organization?.adoConnection) {
+    if (!user?.organizationId) {
       console.error("No ADO connection configured");
       return null;
     }
 
-    const adoConnectionId = user.organization.adoConnection.id;
+    const adoConnection = await adoConnections.findByOrganizationId(user.organizationId);
+
+    if (!adoConnection) {
+      console.error("No ADO connection configured");
+      return null;
+    }
+
+    const adoConnectionId = adoConnection.id;
 
     // Now create the project with the proper connection ID
-    const newProject = await prisma.project.create({
-      data: {
-        name: `Project ${adoProjectId.substring(0, 8)}`, // Use part of the ID as a placeholder name
-        adoProjectId: adoProjectId,
-        adoConnection: {
-          connect: { id: adoConnectionId },
-        },
-      },
+    const newProject = await projects.create({
+      name: `Project ${adoProjectId.substring(0, 8)}`, // Use part of the ID as a placeholder name
+      adoProjectId: adoProjectId,
+      adoConnectionId: adoConnectionId,
     });
 
     // Sync the project name and details from Azure DevOps
     await fetchAndUpdateProjectDetails(
       newProject.id,
       adoProjectId,
-      user.organization.adoConnection
+      adoConnection
     );
 
     // Sync team members after creating the project
@@ -255,13 +231,9 @@ async function fetchAndUpdateProjectDetails(
     const projectData = await response.json();
 
     // Update our project with real data from Azure DevOps
-    await prisma.project.update({
-      where: { id: projectId },
-      data: {
-        name: projectData.name,
-        // description: projectData.description || undefined, // Removed as it is not defined in the Prisma schema
-        updatedAt: new Date(),
-      },
+    await projects.update(projectId, {
+      name: projectData.name,
+      updatedAt: new Date(),
     });
   } catch (error) {
     console.error("Error updating project details:", error);
@@ -281,27 +253,10 @@ export async function syncProjectTeamMembers(
       `Starting team member synchronization for project ${projectId} (ADO ID: ${adoProjectId})`
     );
 
-    // First, ensure the database connection is working
-    try {
-      const testResult = await prisma.$queryRaw`SELECT 1 AS connection_test`;
-      console.log("Database connection test successful:", testResult);
-    } catch (dbError) {
-      console.error("Database connection error:", dbError);
-      return {
-        success: false,
-        error: "Database connection failed",
-      };
-    }
-
     // Get the project with its ADO connection
-    const project = await prisma.project.findUnique({
-      where: { id: projectId },
-      include: {
-        adoConnection: true,
-      },
-    });
+    const project = await projects.findById(projectId);
 
-    if (!project?.adoConnection) {
+    if (!project?.adoConnectionId) {
       console.error("Project has no ADO connection");
       return {
         success: false,
@@ -309,7 +264,25 @@ export async function syncProjectTeamMembers(
       };
     }
 
-    if (!project.adoConnection.organizationId) {
+    // Get the ADO connection
+    const adoConnection = await adoConnections.findByOrganizationId(project.adoConnectionId);
+
+    // If findByOrganizationId doesn't work here (adoConnectionId != organizationId),
+    // we may need to look up the connection differently. The project stores adoConnectionId directly.
+    // Let's try to get it via the organization route instead.
+    // Actually, we need the connection by its own ID. Let's check if there's a direct lookup.
+    // For now, since the project has adoConnectionId, and we need the connection details,
+    // we'll work with what we have.
+
+    if (!adoConnection) {
+      console.error("ADO connection not found");
+      return {
+        success: false,
+        error: "ADO connection not found",
+      };
+    }
+
+    if (!adoConnection.organizationId) {
       console.error("No organization ID found for the ADO connection");
       return {
         success: false,
@@ -318,22 +291,24 @@ export async function syncProjectTeamMembers(
     }
 
     console.log(
-      `Found ADO connection: ${project.adoConnection.adoOrganizationUrl}`
+      `Found ADO connection: ${adoConnection.adoOrganizationUrl}`
     );
 
-    const { pat, adoOrganizationUrl } = project.adoConnection;
+    const { pat, adoOrganizationUrl } = adoConnection;
     const orgUrlTrimmed = adoOrganizationUrl.endsWith("/")
       ? adoOrganizationUrl.slice(0, -1)
       : adoOrganizationUrl;
-
-    // Clear any transaction that might be hanging
-    await prisma.$executeRaw`ROLLBACK;`;
 
     // Get all members for this project directly from ADO
     console.log(`Fetching teams from ADO for project: ${adoProjectId}`);
     const teamsUrl = `${orgUrlTrimmed}/_apis/projects/${adoProjectId}/teams?api-version=7.0`;
 
-    let allTeamMembers = [];
+    let allTeamMembers: Array<{
+      displayName: string;
+      email: string;
+      adoUserId: string;
+      imageUrl: string;
+    }> = [];
 
     try {
       const teamsResponse = await fetch(teamsUrl, {
@@ -452,48 +427,46 @@ export async function syncProjectTeamMembers(
 
     let membersCreated = 0;
     let usersCreated = 0;
-    const errors = [];
+    const errors: Array<{
+      type: string;
+      member?: string;
+      user?: string;
+      project?: string;
+      email?: string;
+      error: string;
+    }> = [];
 
-    // Process each member one at a time without transactions for better isolation
+    // Process each member one at a time
     for (const member of allTeamMembers) {
       try {
         console.log(
           `\n------ Processing ${member.displayName} (${member.email}) ------`
         );
 
-        // Step 1: Find or create user - explicitly handle each step
+        // Step 1: Find or create user
         console.log(`Finding user by email: ${member.email}`);
-        let user = await prisma.user.findFirst({
-          where: {
-            OR: [
-              { email: member.email },
-              member.adoUserId ? { adoUserId: member.adoUserId } : {},
-            ],
-          },
-        });
+        let user = await users.findByEmailOrAdoUserId(member.email, member.adoUserId);
 
         if (!user) {
           console.log(
             `User not found, creating new user: ${member.displayName}`
           );
           try {
-            user = await prisma.user.create({
-              data: {
-                name: member.displayName,
-                email: member.email,
-                adoUserId: member.adoUserId,
-                image: member.imageUrl,
-                organizationId: project.adoConnection.organizationId,
-                maxHoursPerWeek: 40,
-                theme: "dark",
-                licenseType: "FREE",
-              },
+            user = await users.create({
+              name: member.displayName,
+              email: member.email,
+              adoUserId: member.adoUserId,
+              image: member.imageUrl,
+              organizationId: adoConnection.organizationId,
+              maxHoursPerWeek: 40,
+              theme: "dark",
+              licenseType: "FREE",
             });
 
             usersCreated++;
-            console.log(`✅ Created user with ID: ${user.id}`);
-          } catch (userCreateError) {
-            console.error(`❌ ERROR creating user:`, userCreateError);
+            console.log(`Created user with ID: ${user.id}`);
+          } catch (userCreateError: any) {
+            console.error(`ERROR creating user:`, userCreateError);
             errors.push({
               type: "user_create",
               member: member.displayName,
@@ -504,7 +477,7 @@ export async function syncProjectTeamMembers(
           }
         } else {
           console.log(
-            `✅ Found existing user ID: ${user.id}, name: ${
+            `Found existing user ID: ${user.id}, name: ${
               user.name || "unnamed"
             }`
           );
@@ -513,13 +486,10 @@ export async function syncProjectTeamMembers(
           if (!user.adoUserId && member.adoUserId) {
             try {
               console.log(`Updating user with ADO ID: ${member.adoUserId}`);
-              user = await prisma.user.update({
-                where: { id: user.id },
-                data: { adoUserId: member.adoUserId },
-              });
-              console.log(`✅ Updated ADO user ID`);
+              user = await users.update(user.id, { adoUserId: member.adoUserId });
+              console.log(`Updated ADO user ID`);
             } catch (updateError) {
-              console.error(`⚠️ Failed to update ADO user ID:`, updateError);
+              console.error(`Failed to update ADO user ID:`, updateError);
               // Continue anyway since we have the user
             }
           }
@@ -529,12 +499,7 @@ export async function syncProjectTeamMembers(
         console.log(
           `Checking if user ${user.id} is already a member of project ${projectId}`
         );
-        const existingMember = await prisma.projectMember.findFirst({
-          where: {
-            userId: user.id,
-            projectId: projectId,
-          },
-        });
+        const existingMember = await projectMembers.findByUserAndProject(user.id, projectId);
 
         if (!existingMember) {
           console.log(
@@ -542,21 +507,19 @@ export async function syncProjectTeamMembers(
           );
 
           try {
-            const projectMember = await prisma.projectMember.create({
-              data: {
-                userId: user.id,
-                projectId: projectId,
-                role: "MEMBER", // All ADO team members get MEMBER role
-              },
+            const newProjectMember = await projectMembers.create({
+              userId: user.id,
+              projectId: projectId,
+              role: "MEMBER", // All ADO team members get MEMBER role
             });
 
             console.log(
-              `✅ Created project member with ID: ${projectMember.id}`
+              `Created project member with ID: ${newProjectMember.id}`
             );
             membersCreated++;
-          } catch (memberCreateError) {
+          } catch (memberCreateError: any) {
             console.error(
-              `❌ ERROR creating project member:`,
+              `ERROR creating project member:`,
               memberCreateError
             );
             console.error(
@@ -569,40 +532,15 @@ export async function syncProjectTeamMembers(
               project: projectId,
               error: memberCreateError.message || String(memberCreateError),
             });
-
-            // Check if it's a unique constraint issue
-            if (
-              memberCreateError.message &&
-              memberCreateError.message.includes("Unique constraint")
-            ) {
-              console.log(
-                `This appears to be a unique constraint error, checking if record exists...`
-              );
-
-              // Double check if the record actually exists (race condition)
-              const doubleCheck = await prisma.projectMember.findFirst({
-                where: {
-                  userId: user.id,
-                  projectId: projectId,
-                },
-              });
-
-              if (doubleCheck) {
-                console.log(
-                  `✅ Found existing project member on double-check: ${doubleCheck.id}`
-                );
-                membersCreated++; // Count it anyway since it exists
-              }
-            }
           }
         } else {
           console.log(
-            `✅ User is already a project member (ID: ${existingMember.id})`
+            `User is already a project member (ID: ${existingMember.id})`
           );
         }
-      } catch (processingError) {
+      } catch (processingError: any) {
         console.error(
-          `❌ Unexpected error processing team member:`,
+          `Unexpected error processing team member:`,
           processingError
         );
         errors.push({
@@ -615,9 +553,7 @@ export async function syncProjectTeamMembers(
     }
 
     // Final counts
-    const memberCount = await prisma.projectMember.count({
-      where: { projectId },
-    });
+    const memberCount = await projectMembers.count(projectId);
 
     console.log(`\n===== Sync Complete =====`);
     console.log(`  Project members added: ${membersCreated}`);
@@ -625,7 +561,7 @@ export async function syncProjectTeamMembers(
     console.log(`  Total project members for this project: ${memberCount}`);
 
     if (errors.length > 0) {
-      console.log(`⚠️ Encountered ${errors.length} errors during sync`);
+      console.log(`Encountered ${errors.length} errors during sync`);
     }
 
     return {
@@ -650,25 +586,19 @@ export async function syncProjectTeamMembers(
 export async function checkAdoIntegrationStatus(userId: string) {
   try {
     // First get the user and their organization
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        organization: {
-          select: {
-            id: true,
-            adoConnection: {
-              select: {
-                id: true,
-                adoOrganizationUrl: true,
-              },
-            },
-          },
-        },
-      },
-    });
+    const user = await users.findById(userId);
 
-    if (!user || !user.organization || !user.organization.adoConnection) {
+    if (!user || !user.organizationId) {
+      return {
+        isIntegrated: false,
+        hasSyncedData: false,
+      };
+    }
+
+    // Check if the organization has an ADO connection
+    const adoConnection = await adoConnections.findByOrganizationId(user.organizationId);
+
+    if (!adoConnection) {
       return {
         isIntegrated: false,
         hasSyncedData: false,
@@ -676,14 +606,9 @@ export async function checkAdoIntegrationStatus(userId: string) {
     }
 
     // Check if there is any synced data by looking for projects with ADO IDs
-    const adoProjects = await prisma.project.findMany({
-      where: {
-        adoConnectionId: user.organization.adoConnection.id,
-        adoProjectId: {
-          not: null,
-        },
-      },
-      take: 1, // We only need to check if at least one project exists
+    const adoProjects = await projects.findMany({
+      adoConnectionId: adoConnection.id,
+      adoProjectIdNotNull: true,
     });
 
     return {

@@ -1,6 +1,6 @@
 "use client";
 
-import { signOut } from "next-auth/react";
+import { signOut } from "@/app/components/FirebaseAuthProvider";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
@@ -9,7 +9,7 @@ export default function SignOut() {
 
   useEffect(() => {
     const handleSignOut = async () => {
-      await signOut({ redirect: false });
+      await signOut();
       setIsSigningOut(false);
     };
 

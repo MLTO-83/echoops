@@ -2,14 +2,13 @@
 // API endpoint to retry failed AI agent jobs
 
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
-import prisma from "@/lib/prisma";
+import { getSession } from "@/lib/firebase/auth";
+import { projects, aiAgentJobs } from "@/lib/firebase/db";
 
 export const dynamic = "force-dynamic"; // Ensure the route is always dynamic and not cached
 
 export async function POST(request: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -31,34 +30,23 @@ export async function POST(request: NextRequest) {
 
     // No need to check for project membership - any authenticated user can retry jobs
     // Just verify that the project exists
-    const project = await prisma.project.findUnique({
-      where: { id: projectId },
-      select: { id: true },
-    });
+    const project = await projects.findById(projectId);
 
     if (!project) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
     // Check if the job exists and belongs to the project
-    const job = await prisma.aIAgentJob.findUnique({
-      where: {
-        id: jobId,
-        projectId: projectId,
-      },
-    });
+    const job = await aiAgentJobs.findById(jobId);
 
-    if (!job) {
+    if (!job || job.projectId !== projectId) {
       return NextResponse.json({ error: "Job not found" }, { status: 404 });
     }
 
     // Reset the job to PENDING status
-    const updatedJob = await prisma.aIAgentJob.update({
-      where: { id: jobId },
-      data: {
-        status: "PENDING",
-        errorMessage: null,
-      },
+    const updatedJob = await aiAgentJobs.update(jobId, {
+      status: "PENDING",
+      errorMessage: null,
     });
 
     return NextResponse.json({ job: updatedJob });

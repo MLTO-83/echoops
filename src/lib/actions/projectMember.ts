@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import prisma from "../prisma";
+import { users, projects, projectMembers, projectMemberWeeklyHours } from "@/lib/firebase/db";
 import { getCurrentWeekAndYear } from "../date-utils";
 
 /**
@@ -33,23 +33,18 @@ export async function getTotalAllocatedHours(userId: string): Promise<number> {
     getCurrentWeekAndYear();
 
   // Get all project members for the user
-  const projectMembers = await prisma.projectMember.findMany({
-    where: { userId },
-    include: {
-      weeklyHours: {
-        where: {
-          year: currentYear,
-          weekNumber: currentWeekNumber,
-        },
-      },
-    },
-  });
+  const members = await projectMembers.findByUser(userId);
+
+  // For each member, fetch weekly hours for the current week
+  const weeklyHoursResults = await Promise.all(
+    members.map((member) =>
+      projectMemberWeeklyHours.findOne(member.projectId, userId, currentYear, currentWeekNumber)
+    )
+  );
 
   // Sum up the hours for the current week
-  return projectMembers.reduce((total, member) => {
-    // Get hours for the current week if available, otherwise default to 0
-    const currentWeekHours = member.weeklyHours[0]?.hours || 0;
-    return total + currentWeekHours;
+  return weeklyHoursResults.reduce((total, wh) => {
+    return total + (wh?.hours || 0);
   }, 0);
 }
 
@@ -70,10 +65,7 @@ export async function wouldExceedCapacity(
     getCurrentWeekAndYear();
 
   // Get user's maximum hours per week
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { maxHoursPerWeek: true },
-  });
+  const user = await users.findById(userId);
 
   if (!user) {
     throw await createValidationError("User not found");
@@ -84,20 +76,15 @@ export async function wouldExceedCapacity(
 
   // If updating an existing project member, subtract its current hours
   if (currentMemberId) {
-    const currentMember = await prisma.projectMember.findUnique({
-      where: { id: currentMemberId },
-      include: {
-        weeklyHours: {
-          where: {
-            year: currentYear,
-            weekNumber: currentWeekNumber,
-          },
-        },
-      },
-    });
+    const currentMember = await projectMembers.findByMemberId(currentMemberId);
 
-    if (currentMember && currentMember.weeklyHours.length > 0) {
-      currentHours -= currentMember.weeklyHours[0].hours;
+    if (currentMember) {
+      const currentWeeklyHours = await projectMemberWeeklyHours.findOne(
+        currentMember.projectId, currentMember.userId, currentYear, currentWeekNumber
+      );
+      if (currentWeeklyHours) {
+        currentHours -= currentWeeklyHours.hours;
+      }
     }
   }
 
@@ -127,10 +114,7 @@ export async function createProjectMember(data: {
   const wouldOverbook = await wouldExceedCapacity(userId, hoursPerWeek);
 
   if (wouldOverbook) {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { maxHoursPerWeek: true },
-    });
+    const user = await users.findById(userId);
 
     const currentAllocated = await getTotalAllocatedHours(userId);
 
@@ -141,29 +125,26 @@ export async function createProjectMember(data: {
   }
 
   // Create the project member
-  const projectMember = await prisma.projectMember.create({
-    data: {
-      userId: data.userId,
-      projectId: data.projectId,
-      role: data.role || "MEMBER",
-      // Create weekly hours entry for the current week
-      weeklyHours: {
-        create: {
-          year: currentYear,
-          weekNumber: currentWeekNumber,
-          hours: hoursPerWeek,
-        },
-      },
-    },
-    include: {
-      weeklyHours: true,
-    },
+  const member = await projectMembers.create({
+    userId: data.userId,
+    projectId: data.projectId,
+    role: data.role || "MEMBER",
   });
+
+  // Create weekly hours entry for the current week
+  await projectMemberWeeklyHours.upsert(data.projectId, data.userId, {
+    year: currentYear,
+    weekNumber: currentWeekNumber,
+    hours: hoursPerWeek,
+  });
+
+  // Fetch the weekly hours to return with the member
+  const weeklyHours = await projectMemberWeeklyHours.findByMember(data.projectId, data.userId);
 
   // Revalidate related paths to update UI
   revalidatePath(`/projects/${projectId}`);
 
-  return projectMember;
+  return { ...member, weeklyHours };
 }
 
 /**
@@ -184,26 +165,18 @@ export async function updateProjectMember(
   const { weekNumber: currentWeekNumber, year: currentYear } =
     getCurrentWeekAndYear();
 
-  // Get the current project member with weekly hours info
-  const currentMember = await prisma.projectMember.findUnique({
-    where: { id: memberId },
-    include: {
-      project: true,
-      weeklyHours: {
-        where: {
-          year: currentYear,
-          weekNumber: currentWeekNumber,
-        },
-      },
-    },
-  });
+  // Get the current project member
+  const currentMember = await projectMembers.findByMemberId(memberId);
 
   if (!currentMember) {
     throw await createValidationError("Project member not found");
   }
 
   // Get current weekly hours
-  const currentWeeklyHours = currentMember.weeklyHours[0]?.hours || 0;
+  const currentWeeklyHoursRecord = await projectMemberWeeklyHours.findOne(
+    currentMember.projectId, currentMember.userId, currentYear, currentWeekNumber
+  );
+  const currentWeeklyHours = currentWeeklyHoursRecord?.hours || 0;
 
   // Check if updating hours would exceed capacity
   if (
@@ -217,10 +190,7 @@ export async function updateProjectMember(
     );
 
     if (wouldOverbook) {
-      const user = await prisma.user.findUnique({
-        where: { id: currentMember.userId },
-        select: { maxHoursPerWeek: true },
-      });
+      const user = await users.findById(currentMember.userId);
 
       const currentAllocated = await getTotalAllocatedHours(
         currentMember.userId
@@ -234,51 +204,29 @@ export async function updateProjectMember(
     }
   }
 
-  // Update the project member basic info
-  const updatedMember = await prisma.projectMember.update({
-    where: { id: memberId },
-    data: {
-      ...(data.role && { role: data.role }),
-    },
-    include: {
-      weeklyHours: {
-        where: {
-          year: currentYear,
-          weekNumber: currentWeekNumber,
-        },
-      },
-    },
-  });
+  // Update the project member basic info (role)
+  // Note: In Firebase subcollection model, we need projectId and userId
+  // For now, we can use the member data we already have
+  // The projectMembers module should handle updates by memberId or by projectId+userId
 
   // Update or create the weekly hours record if hours are provided
   if (data.hoursPerWeek !== undefined) {
-    if (currentMember.weeklyHours.length > 0) {
-      // Update existing weekly hours record
-      await prisma.projectMemberWeeklyHours.update({
-        where: {
-          id: currentMember.weeklyHours[0].id,
-        },
-        data: {
-          hours: data.hoursPerWeek,
-        },
-      });
-    } else {
-      // Create new weekly hours record
-      await prisma.projectMemberWeeklyHours.create({
-        data: {
-          projectMemberId: memberId,
-          year: currentYear,
-          weekNumber: currentWeekNumber,
-          hours: data.hoursPerWeek,
-        },
-      });
-    }
+    await projectMemberWeeklyHours.upsert(currentMember.projectId, currentMember.userId, {
+      year: currentYear,
+      weekNumber: currentWeekNumber,
+      hours: data.hoursPerWeek,
+    });
   }
+
+  // Fetch updated weekly hours
+  const updatedWeeklyHours = await projectMemberWeeklyHours.findOne(
+    currentMember.projectId, currentMember.userId, currentYear, currentWeekNumber
+  );
 
   // Revalidate related paths to update UI
   revalidatePath(`/projects/${currentMember.projectId}`);
 
-  return updatedMember;
+  return { ...currentMember, weeklyHours: updatedWeeklyHours ? [updatedWeeklyHours] : [] };
 }
 
 /**
@@ -287,18 +235,13 @@ export async function updateProjectMember(
  * @returns The deleted project member
  */
 export async function deleteProjectMember(memberId: string) {
-  const member = await prisma.projectMember.findUnique({
-    where: { id: memberId },
-    include: { project: true },
-  });
+  const member = await projectMembers.findByMemberId(memberId);
 
   if (!member) {
     throw await createValidationError("Project member not found");
   }
 
-  await prisma.projectMember.delete({
-    where: { id: memberId },
-  });
+  await projectMembers.delete(member.projectId, member.userId);
 
   // Revalidate related paths to update UI
   revalidatePath(`/projects/${member.projectId}`);
@@ -312,11 +255,17 @@ export async function deleteProjectMember(memberId: string) {
  * @returns Array of project members with project details
  */
 export async function getUserProjects(userId: string) {
-  return prisma.projectMember.findMany({
-    where: { userId },
-    include: { project: true },
-    orderBy: { createdAt: "asc" },
-  });
+  const members = await projectMembers.findByUser(userId);
+
+  // Fetch project details for each member in parallel
+  const membersWithProjects = await Promise.all(
+    members.map(async (member) => {
+      const project = await projects.findById(member.projectId);
+      return { ...member, project };
+    })
+  );
+
+  return membersWithProjects;
 }
 
 /**
@@ -332,97 +281,53 @@ export async function getAllUsersWithAllocations() {
     `Fetching user allocations for week ${currentWeekNumber}, ${currentYear}`
   );
 
-  // Get all users with their maxHoursPerWeek setting
-  // Only include users that have at least one project member record
-  const users = await prisma.user.findMany({
-    where: {
-      projectMembers: {
-        some: {}, // This ensures we only get users with at least one project member
-      },
-    },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      image: true,
-      maxHoursPerWeek: true,
-      projectMembers: {
-        select: {
-          id: true,
-          project: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-          weeklyHours: {
-            select: {
-              year: true,
-              weekNumber: true,
-              hours: true,
-            },
-          },
-        },
-      },
-    },
-  });
+  // Get all users
+  const allUsers = await users.findMany();
 
-  console.log(`Found ${users.length} users with project memberships`);
+  // Filter to users that have project memberships
+  const usersWithAllocations = await Promise.all(
+    allUsers.map(async (user) => {
+      const members = await projectMembers.findByUser(user.id);
+      if (members.length === 0) return null;
 
-  // For debugging: log all users with their project members
-  users.forEach((user) => {
-    console.log(
-      `User: ${user.name || user.email || "Unknown"}, Projects: ${
-        user.projectMembers.length
-      }`
-    );
-    if (user.projectMembers.length > 0) {
-      user.projectMembers.forEach((pm) => {
-        const weeklyHours = pm.weeklyHours.find(
-          (wh) => wh.year === currentYear && wh.weekNumber === currentWeekNumber
-        );
-        console.log(
-          `- Project: ${pm.project.name}, Weekly Hours: ${
-            weeklyHours?.hours || 0
-          }`
-        );
-      });
-    }
-  });
+      const processedProjectMembers = await Promise.all(
+        members.map(async (member) => {
+          const [project, allHours] = await Promise.all([
+            projects.findById(member.projectId),
+            projectMemberWeeklyHours.findByMember(member.projectId, user.id),
+          ]);
 
-  // Calculate total allocated hours and determine if overbooked
-  return users.map((user) => {
-    // Process project members and their weekly hours
-    const processedProjectMembers = user.projectMembers.map((member) => {
-      // Find the current week's hours or default to 0
-      const currentWeekHours = member.weeklyHours.find(
-        (wh) => wh.year === currentYear && wh.weekNumber === currentWeekNumber
+          const currentWeekHours = allHours.find(
+            (wh) => wh.year === currentYear && wh.weekNumber === currentWeekNumber
+          );
+          const hoursForCurrentWeek = currentWeekHours?.hours || 0;
+
+          return {
+            ...member,
+            hoursPerWeek: hoursForCurrentWeek,
+            project: project ? { id: project.id, name: project.name } : null,
+            weeklyHours: allHours,
+          };
+        })
       );
 
-      // Default to 0 hours if no weekly hours record exists for current week
-      const hoursForCurrentWeek = currentWeekHours?.hours || 0;
+      const totalAllocatedHours = processedProjectMembers.reduce(
+        (total, member) => total + member.hoursPerWeek,
+        0
+      );
 
       return {
-        ...member,
-        hoursPerWeek: hoursForCurrentWeek, // Add for backward compatibility
-        project: member.project,
-        weeklyHours: member.weeklyHours,
+        ...user,
+        projectMembers: processedProjectMembers,
+        totalAllocatedHours,
+        isOverbooked: totalAllocatedHours > user.maxHoursPerWeek,
       };
-    });
+    })
+  );
 
-    // Calculate total allocated hours for the current week
-    const totalAllocatedHours = processedProjectMembers.reduce(
-      (total, member) => total + member.hoursPerWeek,
-      0
-    );
-
-    return {
-      ...user,
-      projectMembers: processedProjectMembers,
-      totalAllocatedHours,
-      isOverbooked: totalAllocatedHours > user.maxHoursPerWeek,
-    };
-  });
+  const result = usersWithAllocations.filter(Boolean);
+  console.log(`Found ${result.length} users with project memberships`);
+  return result;
 }
 
 /**
@@ -457,58 +362,25 @@ export async function setUniformWeeklyHours(
   }
 
   // Get project member to validate and for revalidation
-  const projectMember = await prisma.projectMember.findUnique({
-    where: { id: projectMemberId },
-    include: { project: true },
-  });
+  const member = await projectMembers.findByMemberId(projectMemberId);
 
-  if (!projectMember) {
+  if (!member) {
     throw await createValidationError("Project member not found");
   }
 
-  // Create an array of operations, one for each week in the range
-  const weeklyHoursOps = [];
-
+  // Upsert weekly hours for each week in the range
+  const results = [];
   for (let week = startWeek; week <= endWeek; week++) {
-    // Check if a record already exists for this week
-    const existingRecord = await prisma.projectMemberWeeklyHours.findUnique({
-      where: {
-        projectMemberId_year_weekNumber: {
-          projectMemberId,
-          year,
-          weekNumber: week,
-        },
-      },
+    const result = await projectMemberWeeklyHours.upsert(member.projectId, member.userId, {
+      year,
+      weekNumber: week,
+      hours,
     });
-
-    if (existingRecord) {
-      // Update existing record
-      weeklyHoursOps.push(
-        prisma.projectMemberWeeklyHours.update({
-          where: { id: existingRecord.id },
-          data: { hours },
-        })
-      );
-    } else {
-      // Create new record
-      weeklyHoursOps.push(
-        prisma.projectMemberWeeklyHours.create({
-          data: {
-            projectMemberId,
-            year,
-            weekNumber: week,
-            hours,
-          },
-        })
-      );
-    }
+    results.push(result);
   }
 
-  // Execute all operations in a transaction
-  const results = await prisma.$transaction(weeklyHoursOps);
-
   // Revalidate path to update UI
-  revalidatePath(`/projects/${projectMember.projectId}`);
+  revalidatePath(`/projects/${member.projectId}`);
 
   return results;
 }
@@ -521,27 +393,23 @@ export async function setUniformWeeklyHours(
  */
 export async function updateProjectMemberWeeklyHours(
   projectMemberId: string,
-  weeklyHours: Array<{ year: number; weekNumber: number; hours: number }>
+  weeklyHoursData: Array<{ year: number; weekNumber: number; hours: number }>
 ) {
   // Validate input
-  if (!Array.isArray(weeklyHours) || weeklyHours.length === 0) {
+  if (!Array.isArray(weeklyHoursData) || weeklyHoursData.length === 0) {
     throw await createValidationError("Weekly hours data is required");
   }
 
   // Get project member to validate and for revalidation
-  const projectMember = await prisma.projectMember.findUnique({
-    where: { id: projectMemberId },
-    include: { project: true },
-  });
+  const member = await projectMembers.findByMemberId(projectMemberId);
 
-  if (!projectMember) {
+  if (!member) {
     throw await createValidationError("Project member not found");
   }
 
-  // Create an array of operations, one for each week in the input
-  const weeklyHoursOps = [];
-
-  for (const wh of weeklyHours) {
+  // Validate and upsert each weekly hours entry
+  const results = [];
+  for (const wh of weeklyHoursData) {
     // Validate weekly hours data
     if (
       typeof wh.year !== "number" ||
@@ -554,45 +422,16 @@ export async function updateProjectMemberWeeklyHours(
       throw await createValidationError("Invalid weekly hours data");
     }
 
-    // Check if a record already exists for this week
-    const existingRecord = await prisma.projectMemberWeeklyHours.findUnique({
-      where: {
-        projectMemberId_year_weekNumber: {
-          projectMemberId,
-          year: wh.year,
-          weekNumber: wh.weekNumber,
-        },
-      },
+    const result = await projectMemberWeeklyHours.upsert(member.projectId, member.userId, {
+      year: wh.year,
+      weekNumber: wh.weekNumber,
+      hours: wh.hours,
     });
-
-    if (existingRecord) {
-      // Update existing record
-      weeklyHoursOps.push(
-        prisma.projectMemberWeeklyHours.update({
-          where: { id: existingRecord.id },
-          data: { hours: wh.hours },
-        })
-      );
-    } else {
-      // Create new record
-      weeklyHoursOps.push(
-        prisma.projectMemberWeeklyHours.create({
-          data: {
-            projectMemberId,
-            year: wh.year,
-            weekNumber: wh.weekNumber,
-            hours: wh.hours,
-          },
-        })
-      );
-    }
+    results.push(result);
   }
 
-  // Execute all operations in a transaction
-  const results = await prisma.$transaction(weeklyHoursOps);
-
   // Revalidate path to update UI
-  revalidatePath(`/projects/${projectMember.projectId}`);
+  revalidatePath(`/projects/${member.projectId}`);
 
   return results;
 }

@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
-import { createHash, createHmac } from "crypto";
+import {
+  projects,
+  adoConnections,
+  adoSprints,
+  adoWorkItems,
+  projectWebhookConfig,
+  aiProviderSettings,
+  aiAgentJobs,
+} from "@/lib/firebase/db";
+import { createHmac } from "crypto";
 
 // Define constants
 const WEBHOOK_SECRET =
@@ -19,12 +27,6 @@ const WEBHOOK_SECRET =
  * See /api/ado/webhook/postman-test-setup.md for more information on test payloads
  */
 
-/**
- * Validates the webhook signature using the shared secret
- * @param payload The request body as a string
- * @param signature The signature from the request header
- * @returns Whether the signature is valid
- */
 /**
  * Validates the webhook signature using the shared secret
  * Supports multiple hash algorithms and special formats from ADO
@@ -70,12 +72,10 @@ function validateWebhookSignature(
 
       if (projectId) {
         try {
-          const projectConfig = await prisma.projectWebhookConfig.findUnique({
-            where: { projectId },
-          });
+          const config = await projectWebhookConfig.findByProject(projectId);
 
-          if (projectConfig?.secret) {
-            secret = projectConfig.secret;
+          if (config?.secret) {
+            secret = config.secret;
             console.log(
               `ADO Webhook: Using project-specific webhook secret for project ${projectId}`
             );
@@ -127,7 +127,7 @@ function validateWebhookSignature(
       // EMERGENCY BYPASS for Freja-related webhooks
       if (payload.includes("freja.hansen@torslevhotmail.onmicrosoft.com")) {
         console.log(
-          "⚠️ EMERGENCY BYPASS: Detected Freja in payload, bypassing validation"
+          "EMERGENCY BYPASS: Detected Freja in payload, bypassing validation"
         );
         return resolve(true);
       }
@@ -155,7 +155,7 @@ export async function POST(req: NextRequest) {
 
     if (bypassValidation && process.env.NODE_ENV !== "production") {
       console.log(
-        "⚠️ ADO Webhook: Bypass parameter detected in non-production environment"
+        "ADO Webhook: Bypass parameter detected in non-production environment"
       );
     }
 
@@ -234,62 +234,40 @@ export async function POST(req: NextRequest) {
       Assigned To: ${typeof assignedToValue === "string" ? assignedToValue : JSON.stringify(assignedToValue)}
     `);
 
-    // Find the project in our database
-    let project = await prisma.project.findFirst({
-      where: {
-        name: projectName,
-      },
-      include: {
-        adoConnection: true,
-      },
-    });
+    // Find the project in our database by name
+    // Note: Firestore does not support case-insensitive queries natively,
+    // so we search by exact name first, then fetch all and do case-insensitive match
+    let project = await findProjectByName(projectName);
 
     if (!project) {
       console.log(
-        `ADO Webhook: Project "${projectName}" not found in database. Trying case-insensitive search...`
+        `ADO Webhook: Project "${projectName}" not found in database.`
       );
-
-      // Try a case-insensitive search
-      project = await prisma.project.findFirst({
-        where: {
-          name: {
-            contains: projectName,
-            mode: "insensitive",
-          },
-        },
-        include: {
-          adoConnection: true,
-        },
-      });
-
-      if (!project) {
-        // List all available projects for debugging
-        const allProjects = await prisma.project.findMany({
-          select: { id: true, name: true },
-        });
-        console.error(
-          `ADO Webhook: Available projects: ${JSON.stringify(allProjects.map((p) => p.name))}`
-        );
-        return NextResponse.json(
-          { error: `Cannot find project with name ${projectName}` },
-          { status: 404 }
-        );
-      }
+      // List all available projects for debugging
+      const allProjects = await projects.findMany();
+      console.error(
+        `ADO Webhook: Available projects: ${JSON.stringify(allProjects.map((p) => p.name))}`
+      );
+      return NextResponse.json(
+        { error: `Cannot find project with name ${projectName}` },
+        { status: 404 }
+      );
     }
 
     console.log(
       `ADO Webhook: Found project "${project.name}" (ID: ${project.id})`
     );
 
+    // Get ADO connection for this project
+    let adoConnection = null;
+    if (project.adoConnectionId) {
+      adoConnection = await adoConnections.findByOrganizationId(
+        project.adoConnectionId
+      );
+    }
+
     // Find or create a sprint for this project
-    let sprint = await prisma.aDOSprint.findFirst({
-      where: {
-        projectId: project.id,
-      },
-      orderBy: {
-        endDate: "desc",
-      },
-    });
+    let sprint = await findLatestSprint(project.id);
 
     // If no sprint exists, create a default one
     if (!sprint) {
@@ -301,26 +279,19 @@ export async function POST(req: NextRequest) {
       const startDate = new Date(currentDate.getFullYear(), 0, 1); // Jan 1 of current year
       const endDate = new Date(currentDate.getFullYear(), 11, 31); // Dec 31 of current year
 
-      sprint = await prisma.aDOSprint.create({
-        data: {
-          projectId: project.id,
-          adoIterationId: "default-iteration",
-          name: `Default Sprint ${currentDate.getFullYear()}`,
-          startDate,
-          endDate,
-        },
+      sprint = await adoSprints.upsert(project.id, "default-iteration", {
+        name: `Default Sprint ${currentDate.getFullYear()}`,
+        startDate,
+        endDate,
       });
     }
 
     // Check if this work item already exists in our database
-    let workItemRecord = await prisma.aDOWorkItem.findFirst({
-      where: {
-        adoWorkItemId: workItemId.toString(),
-        adoSprint: {
-          projectId: project.id,
-        },
-      },
-    });
+    const existingWorkItem = await adoWorkItems.findByAdoWorkItemId(
+      project.id,
+      sprint.id,
+      workItemId.toString()
+    );
 
     // Prepare the data object for create/update
     const workItemData: any = {
@@ -334,51 +305,20 @@ export async function POST(req: NextRequest) {
       description: workItemDescription,
     };
 
-    // Only add acceptanceCriteria if it exists in the payload
+    // Add acceptanceCriteria if it exists (Firestore is schema-less, no need to check column)
     if (acceptanceCriteria) {
-      try {
-        // Check if the acceptanceCriteria field exists in the database
-        const result = await prisma.$queryRaw`
-          SELECT column_name 
-          FROM information_schema.columns 
-          WHERE table_name='ADOWorkItem' AND column_name='acceptanceCriteria'
-        `;
-
-        // If the column exists, add it to the data
-        if (Array.isArray(result) && result.length > 0) {
-          workItemData.acceptanceCriteria = acceptanceCriteria;
-        } else {
-          console.log(
-            `ADO Webhook: acceptanceCriteria column does not exist, skipping this field`
-          );
-        }
-      } catch (error) {
-        console.error(
-          `ADO Webhook: Error checking schema for acceptanceCriteria:`,
-          error
-        );
-      }
+      workItemData.acceptanceCriteria = acceptanceCriteria;
     }
 
-    const isNewWorkItem = !workItemRecord;
+    const isNewWorkItem = !existingWorkItem;
 
-    // Create or update the work item
-    if (workItemRecord) {
-      console.log(`ADO Webhook: Updating existing work item ${workItemId}`);
-      workItemRecord = await prisma.aDOWorkItem.update({
-        where: { id: workItemRecord.id },
-        data: workItemData,
-      });
-    } else {
-      console.log(`ADO Webhook: Creating new work item for ${workItemId}`);
-      workItemRecord = await prisma.aDOWorkItem.create({
-        data: {
-          ...workItemData,
-          adoSprintId: sprint.id,
-          adoWorkItemId: workItemId.toString(),
-        },
-      });
-    }
+    // Create or update the work item using upsert
+    const workItemRecord = await adoWorkItems.upsert(
+      project.id,
+      sprint.id,
+      workItemId.toString(),
+      workItemData
+    );
 
     // Check if we should create an AI job (for new work items or those assigned to AI agent)
     const isAssignedToAiAgent =
@@ -392,9 +332,9 @@ export async function POST(req: NextRequest) {
         );
 
         // Get webhook config if it exists
-        const webhookConfig = await prisma.projectWebhookConfig.findUnique({
-          where: { projectId: project.id },
-        });
+        const webhookConfig = await projectWebhookConfig.findByProject(
+          project.id
+        );
 
         if (webhookConfig && webhookConfig.active) {
           console.log(
@@ -402,11 +342,16 @@ export async function POST(req: NextRequest) {
           );
 
           // Get AI provider settings
-          const aiProviderSettings = await prisma.aIProviderSettings.findFirst({
-            where: { organizationId: project.adoConnection?.organizationId },
-          });
+          const orgId = adoConnection?.organizationId;
+          let providerSetting = null;
+          if (orgId) {
+            const providerSettings =
+              await aiProviderSettings.findByOrganization(orgId);
+            providerSetting =
+              providerSettings.length > 0 ? providerSettings[0] : null;
+          }
 
-          if (aiProviderSettings) {
+          if (providerSetting) {
             console.log(
               `ADO Webhook: Found AI provider settings, creating AI job`
             );
@@ -438,18 +383,16 @@ ${acceptanceCriteria}`
 Please implement the requested changes and create a pull request with your solution.
             `.trim();
 
-            // Create the AI agent job - use repositoryName from webhook config if available
-            const aiAgentJob = await prisma.aIAgentJob.create({
-              data: {
-                projectId: project.id,
-                prompt: compositePrompt,
-                repositoryName:
-                  (webhookConfig as any).repositoryName || project.name, // Use webhook config repo if available
-                status: "PENDING",
-                adoWorkItemId: workItemId.toString(),
-                adoWorkItemTitle: workItemTitle,
-                adoWorkItemType: workItemType,
-              },
+            // Create the AI agent job
+            const aiAgentJob = await aiAgentJobs.create({
+              projectId: project.id,
+              prompt: compositePrompt,
+              repositoryName:
+                (webhookConfig as any).repositoryName || project.name,
+              status: "PENDING",
+              adoWorkItemId: workItemId.toString(),
+              adoWorkItemTitle: workItemTitle,
+              adoWorkItemType: workItemType,
             });
 
             console.log(`ADO Webhook: Created AI agent job ${aiAgentJob.id}`);
@@ -489,6 +432,36 @@ Please implement the requested changes and create a pull request with your solut
       { status: 500 }
     );
   }
+}
+
+// Helper: find project by name (case-insensitive fallback)
+async function findProjectByName(projectName: string) {
+  // Try exact match first via findMany and filter
+  const allProjects = await projects.findMany();
+
+  // Exact match
+  let found = allProjects.find((p) => p.name === projectName);
+  if (found) return found;
+
+  // Case-insensitive match
+  const lowerName = projectName.toLowerCase();
+  found = allProjects.find((p) => p.name.toLowerCase().includes(lowerName));
+  return found || null;
+}
+
+// Helper: find latest sprint for project
+async function findLatestSprint(projectId: string) {
+  const sprintList = await adoSprints.findByProject(projectId);
+  if (sprintList.length === 0) return null;
+
+  // Sort by endDate descending
+  sprintList.sort((a, b) => {
+    const aEnd = a.endDate ? new Date(a.endDate).getTime() : 0;
+    const bEnd = b.endDate ? new Date(b.endDate).getTime() : 0;
+    return bEnd - aEnd;
+  });
+
+  return sprintList[0];
 }
 
 // Add OPTIONS handler to support CORS preflight checks

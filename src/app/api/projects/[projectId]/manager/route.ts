@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
-import prisma from "@/lib/prisma";
+import { getSession } from "@/lib/firebase/auth";
+import { projects, users, projectMembers, projectMemberWeeklyHours } from "@/lib/firebase/db";
 import { getCurrentWeekAndYear } from "@/lib/date-utils";
 
 // POST /api/projects/:projectId/manager - Set a project manager (OWNER role)
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
 
     if (!session?.user) {
       return NextResponse.json(
@@ -30,98 +29,60 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if the project exists
-    const project = await prisma.project.findUnique({
-      where: { id: projectId },
-    });
+    const project = await projects.findById(projectId);
 
     if (!project) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
     // Check if the user exists
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-    });
+    const user = await users.findById(userId);
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Begin a transaction to ensure consistency
-    const result = await prisma.$transaction(async (prisma) => {
-      // 1. Find current project manager (if any)
-      const currentManager = await prisma.projectMember.findFirst({
-        where: {
-          projectId: projectId,
-          role: "OWNER",
-        },
-      });
+    // 1. Find current project manager (if any)
+    const members = await projectMembers.findByProject(projectId);
+    const currentManager = members.find((m: any) => m.role === "OWNER");
 
-      // 2. If there is a current manager, demote to regular member
-      if (currentManager) {
-        if (currentManager.userId === userId) {
-          // The requested user is already the manager
-          return currentManager;
-        }
-
-        await prisma.projectMember.update({
-          where: {
-            userId_projectId: {
-              userId: currentManager.userId,
-              projectId: projectId,
-            },
-          },
-          data: {
-            role: "MEMBER",
-          },
-        });
+    // 2. If there is a current manager, demote to regular member
+    if (currentManager) {
+      if (currentManager.userId === userId) {
+        // The requested user is already the manager
+        return NextResponse.json({ manager: currentManager });
       }
 
-      // 3. Check if the new manager is already a member
-      const existingMember = await prisma.projectMember.findUnique({
-        where: {
-          userId_projectId: {
-            userId: userId,
-            projectId: projectId,
-          },
-        },
+      await projectMembers.update(projectId, currentManager.userId, {
+        role: "MEMBER",
+      });
+    }
+
+    // 3. Check if the new manager is already a member
+    const existingMember = await projectMembers.findByUserAndProject(userId, projectId);
+
+    // 4. Either update existing member to OWNER or create new member as OWNER
+    let result;
+    if (existingMember) {
+      // Update the role to OWNER
+      await projectMembers.update(projectId, userId, { role: "OWNER" });
+      result = await projectMembers.findByUserAndProject(userId, projectId);
+    } else {
+      // Get current week and year
+      const { weekNumber, year } = getCurrentWeekAndYear();
+
+      // Create a new member with OWNER role
+      await projectMembers.create({
+        userId,
+        projectId,
+        role: "OWNER",
       });
 
-      // 4. Either update existing member to OWNER or create new member as OWNER
-      if (existingMember) {
-        // Update the role to OWNER
-        return prisma.projectMember.update({
-          where: {
-            userId_projectId: {
-              userId: userId,
-              projectId: projectId,
-            },
-          },
-          data: {
-            role: "OWNER",
-          },
-        });
-      } else {
-        // Get current week and year
-        const { weekNumber, year } = getCurrentWeekAndYear();
+      // Set weekly hours to 0 for the new member
+      await projectMemberWeeklyHours.upsert(projectId, userId, { year, weekNumber, hours: 0 });
 
-        // Create a new member with OWNER role and set weekly hours to 0
-        return prisma.projectMember.create({
-          data: {
-            userId: userId,
-            projectId: projectId,
-            role: "OWNER",
-            weeklyHours: {
-              create: {
-                year: year,
-                weekNumber: weekNumber,
-                hours: 0,
-              },
-            },
-          },
-        });
-      }
-    });
+      result = await projectMembers.findByUserAndProject(userId, projectId);
+    }
 
     return NextResponse.json({ manager: result });
   } catch (error) {

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
-import prisma from "@/lib/prisma";
+import { getSession } from "@/lib/firebase/auth";
+import { users, organizations, aiProviderSettings, aiAgentJobs } from "@/lib/firebase/db";
 import { OpenAI } from "openai";
 
 /**
@@ -10,7 +9,7 @@ import { OpenAI } from "openai";
  */
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
     if (!session?.user) {
       return NextResponse.json(
         { error: "Authentication required" },
@@ -36,12 +35,17 @@ export async function POST(req: NextRequest) {
     }
 
     // Get the user's organization
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email as string },
-      include: { organization: true },
-    });
+    const user = await users.findByEmail(session.user.email as string);
 
-    if (!user || !user.organization) {
+    if (!user || !user.organizationId) {
+      return NextResponse.json(
+        { error: "User not associated with an organization" },
+        { status: 400 }
+      );
+    }
+
+    const organization = await organizations.findById(user.organizationId);
+    if (!organization) {
       return NextResponse.json(
         { error: "User not associated with an organization" },
         { status: 400 }
@@ -56,14 +60,10 @@ export async function POST(req: NextRequest) {
         : "openai";
 
     // Get the AI provider settings from the database
-    const providerSettings = await prisma.aIProviderSettings.findUnique({
-      where: {
-        organizationId_provider: {
-          organizationId: user.organizationId as string,
-          provider: providerName,
-        },
-      },
-    });
+    const providerSettings = await aiProviderSettings.findByOrgAndProvider(
+      user.organizationId as string,
+      providerName
+    );
 
     if (!providerSettings) {
       return NextResponse.json(
@@ -75,15 +75,11 @@ export async function POST(req: NextRequest) {
     }
 
     // Create a record of this job
-    const job = await prisma.aIAgentJob.create({
-      data: {
-        prompt,
-        repositoryName,
-        status: "processing",
-        project: {
-          connect: { id: projectId },
-        },
-      },
+    const job = await aiAgentJobs.create({
+      projectId,
+      prompt,
+      repositoryName,
+      status: "processing",
     });
 
     let aiResponse;
@@ -169,7 +165,7 @@ export async function POST(req: NextRequest) {
             let responseText = "";
             try {
               responseText = geminiResponse.response.text();
-            } catch (textError) {
+            } catch (textError: any) {
               console.log(
                 "Failed to get text() from response, trying alternative methods..."
               );
@@ -238,14 +234,11 @@ export async function POST(req: NextRequest) {
 
       // Update job with successful result - store the result in the pullRequestUrl field temporarily
       // since there's no dedicated result field in the schema
-      await prisma.aIAgentJob.update({
-        where: { id: job.id },
-        data: {
-          status: "completed",
-          pullRequestUrl: aiResponse, // Using this field to store the response
-          adoWorkItemTitle: `AI Response (${new Date().toISOString()})`,
-          adoWorkItemType: providerName, // Store the provider name for reference
-        },
+      await aiAgentJobs.update(job.id, {
+        status: "completed",
+        pullRequestUrl: aiResponse, // Using this field to store the response
+        adoWorkItemTitle: `AI Response (${new Date().toISOString()})`,
+        adoWorkItemType: providerName, // Store the provider name for reference
       });
     } catch (e) {
       console.error(
@@ -255,12 +248,9 @@ export async function POST(req: NextRequest) {
       errorMessage = e instanceof Error ? e.message : "Unknown error occurred";
 
       // Update job with error
-      await prisma.aIAgentJob.update({
-        where: { id: job.id },
-        data: {
-          status: "failed",
-          errorMessage,
-        },
+      await aiAgentJobs.update(job.id, {
+        status: "failed",
+        errorMessage,
       });
     }
 

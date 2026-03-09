@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import prisma from "../prisma";
+import { users, projects, projectMembers, projectMemberWeeklyHours } from "@/lib/firebase/db";
 
 /**
  * Error type for validation issues
@@ -34,24 +34,18 @@ export async function getTotalWeeklyAllocatedHours(
   weekNumber: number
 ): Promise<number> {
   // Get all project members for this user
-  const projectMembers = await prisma.projectMember.findMany({
-    where: { userId },
-    include: {
-      weeklyHours: {
-        where: {
-          year,
-          weekNumber,
-        },
-      },
-    },
-  });
+  const members = await projectMembers.findByUser(userId);
+
+  // For each member, fetch weekly hours for the specified week
+  const weeklyHoursResults = await Promise.all(
+    members.map((member) =>
+      projectMemberWeeklyHours.findOne(member.projectId, userId, year, weekNumber)
+    )
+  );
 
   // Sum up the hours for this specific week
-  return projectMembers.reduce((total, member) => {
-    const weeklyHoursEntry = member.weeklyHours.find(
-      (entry) => entry.year === year && entry.weekNumber === weekNumber
-    );
-    return total + (weeklyHoursEntry?.hours || 0);
+  return weeklyHoursResults.reduce((total, wh) => {
+    return total + (wh?.hours || 0);
   }, 0);
 }
 
@@ -72,10 +66,7 @@ export async function wouldExceedWeeklyCapacity(
   currentProjectMemberId: string
 ): Promise<boolean> {
   // Get user's maximum hours per week
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { maxHoursPerWeek: true },
-  });
+  const user = await users.findById(userId);
 
   if (!user) {
     throw await createValidationError("User not found");
@@ -89,19 +80,19 @@ export async function wouldExceedWeeklyCapacity(
   );
 
   // Get current hours for this project member in this week
-  const currentWeeklyHours = await prisma.projectMemberWeeklyHours.findUnique({
-    where: {
-      projectMemberId_year_weekNumber: {
-        projectMemberId: currentProjectMemberId,
-        year,
-        weekNumber,
-      },
-    },
-  });
+  // We need projectId and userId - get them from the member record
+  const currentMember = await projectMembers.findByMemberId(currentProjectMemberId);
+  let currentMemberHours = 0;
+  if (currentMember) {
+    const currentWeeklyHours = await projectMemberWeeklyHours.findOne(
+      currentMember.projectId, currentMember.userId, year, weekNumber
+    );
+    currentMemberHours = currentWeeklyHours?.hours || 0;
+  }
 
   // Subtract current hours for this project member from total
   const currentHoursExcludingThisProject =
-    currentHoursAcrossAllProjects - (currentWeeklyHours?.hours || 0);
+    currentHoursAcrossAllProjects - currentMemberHours;
 
   // Check if adding the new hours would exceed capacity
   return currentHoursExcludingThisProject + hours > user.maxHoursPerWeek;
@@ -131,18 +122,18 @@ export async function setWeeklyHours(
   }
 
   // Get the project member
-  const projectMember = await prisma.projectMember.findUnique({
-    where: { id: projectMemberId },
-    include: { user: true, project: true },
-  });
+  const member = await projectMembers.findByMemberId(projectMemberId);
 
-  if (!projectMember) {
+  if (!member) {
     throw await createValidationError("Project member not found");
   }
 
+  // Get user for capacity check
+  const user = await users.findById(member.userId);
+
   // Check if setting these hours would exceed user's capacity
   const wouldOverbook = await wouldExceedWeeklyCapacity(
-    projectMember.userId,
+    member.userId,
     year,
     weekNumber,
     hours,
@@ -150,42 +141,28 @@ export async function setWeeklyHours(
   );
 
   if (wouldOverbook) {
-    const user = projectMember.user;
     const currentAllocated = await getTotalWeeklyAllocatedHours(
-      projectMember.userId,
+      member.userId,
       year,
       weekNumber
     );
 
     throw await createValidationError(
-      `Setting ${hours} hours for week ${weekNumber}, ${year} would exceed user's maximum capacity of ${user.maxHoursPerWeek} hours per week. ` +
+      `Setting ${hours} hours for week ${weekNumber}, ${year} would exceed user's maximum capacity of ${user?.maxHoursPerWeek} hours per week. ` +
         `Current allocated hours for this week: ${currentAllocated}.`
     );
   }
 
   // Update or create weekly hours entry using upsert
-  const weeklyHours = await prisma.projectMemberWeeklyHours.upsert({
-    where: {
-      projectMemberId_year_weekNumber: {
-        projectMemberId,
-        year,
-        weekNumber,
-      },
-    },
-    update: {
-      hours,
-    },
-    create: {
-      projectMemberId,
-      year,
-      weekNumber,
-      hours,
-    },
+  const weeklyHours = await projectMemberWeeklyHours.upsert(member.projectId, member.userId, {
+    year,
+    weekNumber,
+    hours,
   });
 
   // Revalidate related paths to update UI
-  revalidatePath(`/projects/${projectMember.projectId}`);
-  revalidatePath(`/projects/${projectMember.projectId}/weekly-hours`);
+  revalidatePath(`/projects/${member.projectId}`);
+  revalidatePath(`/projects/${member.projectId}/weekly-hours`);
 
   return weeklyHours;
 }
@@ -205,12 +182,9 @@ export async function setBulkWeeklyHours(
   hours: number
 ) {
   // Get the project member
-  const projectMember = await prisma.projectMember.findUnique({
-    where: { id: projectMemberId },
-    include: { project: true },
-  });
+  const member = await projectMembers.findByMemberId(projectMemberId);
 
-  if (!projectMember) {
+  if (!member) {
     throw await createValidationError("Project member not found");
   }
 
@@ -245,8 +219,8 @@ export async function setBulkWeeklyHours(
   }
 
   // Revalidate UI
-  revalidatePath(`/projects/${projectMember.projectId}`);
-  revalidatePath(`/projects/${projectMember.projectId}/weekly-hours`);
+  revalidatePath(`/projects/${member.projectId}`);
+  revalidatePath(`/projects/${member.projectId}/weekly-hours`);
 
   return results;
 }
@@ -258,13 +232,20 @@ export async function setBulkWeeklyHours(
  * @returns Array of weekly hours entries
  */
 export async function getWeeklyHours(projectMemberId: string, year?: number) {
-  return prisma.projectMemberWeeklyHours.findMany({
-    where: {
-      projectMemberId,
-      ...(year && { year }),
-    },
-    orderBy: [{ year: "asc" }, { weekNumber: "asc" }],
-  });
+  const member = await projectMembers.findByMemberId(projectMemberId);
+
+  if (!member) {
+    return [];
+  }
+
+  const allHours = await projectMemberWeeklyHours.findByMember(member.projectId, member.userId);
+
+  // Filter by year if provided
+  if (year) {
+    return allHours.filter((wh: { year: number }) => wh.year === year);
+  }
+
+  return allHours;
 }
 
 /**
@@ -274,24 +255,32 @@ export async function getWeeklyHours(projectMemberId: string, year?: number) {
  * @returns Project members with their weekly hours
  */
 export async function getProjectWeeklyHours(projectId: string, year?: number) {
-  return prisma.projectMember.findMany({
-    where: { projectId },
-    include: {
-      user: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          image: true,
-          maxHoursPerWeek: true,
-        },
-      },
-      weeklyHours: {
-        where: year ? { year } : undefined,
-        orderBy: [{ year: "asc" }, { weekNumber: "asc" }],
-      },
-    },
-  });
+  const members = await projectMembers.findByProject(projectId);
+
+  const membersWithDetails = await Promise.all(
+    members.map(async (member) => {
+      const [user, allHours] = await Promise.all([
+        users.findById(member.userId),
+        projectMemberWeeklyHours.findByMember(projectId, member.userId, year ? { year } : undefined),
+      ]);
+
+      return {
+        ...member,
+        user: user
+          ? {
+              id: user.id,
+              name: user.name,
+              email: user.email,
+              image: user.image,
+              maxHoursPerWeek: user.maxHoursPerWeek,
+            }
+          : null,
+        weeklyHours: allHours,
+      };
+    })
+  );
+
+  return membersWithDetails;
 }
 
 /**
@@ -301,19 +290,28 @@ export async function getProjectWeeklyHours(projectId: string, year?: number) {
  * @returns Array of weekly hours grouped by project
  */
 export async function getUserWeeklyHours(userId: string, year?: number) {
-  return prisma.projectMember.findMany({
-    where: { userId },
-    include: {
-      project: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
-      weeklyHours: {
-        where: year ? { year } : undefined,
-        orderBy: [{ year: "asc" }, { weekNumber: "asc" }],
-      },
-    },
-  });
+  const members = await projectMembers.findByUser(userId);
+
+  // Fetch project and weekly hours for each member in parallel
+  const membersWithDetails = await Promise.all(
+    members.map(async (member) => {
+      const [project, allHours] = await Promise.all([
+        projects.findById(member.projectId),
+        projectMemberWeeklyHours.findByMember(member.projectId, userId),
+      ]);
+
+      // Filter by year if provided
+      const filteredHours = year
+        ? allHours.filter((wh: { year: number }) => wh.year === year)
+        : allHours;
+
+      return {
+        ...member,
+        project: project ? { id: project.id, name: project.name } : null,
+        weeklyHours: filteredHours,
+      };
+    })
+  );
+
+  return membersWithDetails;
 }
