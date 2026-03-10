@@ -5,12 +5,16 @@ async function testGoogleAPI() {
   try {
     console.log("=== Testing Google Gemini API Directly ===");
 
-    // Your API key from the database
-    const apiKey = "AIzaSyARhmrn-Refh1Cp5ltuN_6pWi3RbTQazQc";
+    // Read API key from environment variable
+    const apiKey = process.env.GOOGLE_API_KEY;
+    if (!apiKey) {
+      console.error("Error: GOOGLE_API_KEY environment variable is not set");
+      process.exit(1);
+    }
     const modelName = "gemini-2.5-pro-preview-05-06";
     const prompt = "What is the meaning for code review?";
 
-    console.log("Using API Key:", apiKey);
+    console.log("Using API Key: ***" + apiKey.slice(-4));
     console.log("Using Model:", modelName);
     console.log("Using Prompt:", prompt);
 
