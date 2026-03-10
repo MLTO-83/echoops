@@ -2,13 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/firebase/auth";
 import { users, verificationTokens } from "@/lib/firebase/db";
 import { sendEmail } from "@/lib/email";
+import { getSecret } from "@/lib/secrets";
 import { createHash } from "crypto";
 
-function generateVerificationToken(email: string): string {
-  const secret = process.env.EMAIL_SECRET;
-  if (!secret) {
-    throw new Error("EMAIL_SECRET environment variable is required");
-  }
+const MAILERSEND_SECRET_NAME =
+  process.env.MAILERSEND_SECRET_NAME ||
+  "projects/83155172875/secrets/mailersend-email-MAILERSEND_API_KEY";
+
+async function generateVerificationToken(email: string): Promise<string> {
+  const secret = await getSecret(MAILERSEND_SECRET_NAME);
   const timestamp = Date.now().toString();
   return createHash("sha256")
     .update(`${email}-${timestamp}-${secret}`)
@@ -46,7 +48,7 @@ export async function POST(req: NextRequest) {
       await verificationTokens.deleteByToken(existingToken.token);
     }
 
-    const token = generateVerificationToken(email);
+    const token = await generateVerificationToken(email);
 
     const expires = new Date();
     expires.setHours(expires.getHours() + 1);

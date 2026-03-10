@@ -1,7 +1,7 @@
 MailerSend - Email Service
 
 Provider: MailerSend Firebase Extension
-API Key: See `mailsender_api` in `.env.local`
+API Key: Stored in Google Cloud Secret Manager (`projects/83155172875/secrets/mailersend-email-MAILERSEND_API_KEY`)
 
 ## How It Works
 
@@ -25,16 +25,17 @@ firebase ext:install mailersend/mailersend-email --project=echoops-65d4b
 
 - Add and verify your sending domain (edit DNS records)
 - Create an API token with full access
-- Add the token to `.env.local` as `mailsender_api`
+- Store the API token in Google Cloud Secret Manager (the Firebase extension does this automatically during install)
 
 ### 3. Environment Variables
 
 | Variable | Description |
 |---|---|
-| `mailsender_api` | MailerSend API token (in .env.local) |
+| `MAILERSEND_SECRET_NAME` | Secret Manager resource name (default: `projects/83155172875/secrets/mailersend-email-MAILERSEND_API_KEY`) |
 | `MAILERSEND_FROM_EMAIL` | Default sender email (default: `noreply@echoops.org`) |
 | `MAILERSEND_FROM_NAME` | Default sender name (default: `EchoOps`) |
-| `EMAIL_SECRET` | **Required.** Secret for generating verification tokens |
+
+The MailerSend API key is fetched from Google Cloud Secret Manager at runtime (cached for 5 minutes). It is also used as the secret for generating email verification tokens. No API keys are stored in `.env.local` or source code.
 
 ## Firestore Document Schema
 
@@ -111,3 +112,12 @@ Changes made:
 - Removed `resend`, `nodemailer`, and `@types/nodemailer` npm packages
 - Removed hardcoded Resend API key fallback (was leaked in source)
 - Removed hardcoded EMAIL_SECRET fallback — now required as env var
+
+**Integrated Google Cloud Secret Manager (2026-03-10)**
+
+Changes made:
+- Created `src/lib/secrets.ts` — Secret Manager client with 5-minute cache
+- Updated `/api/email/send-verification` — fetches MailerSend API key from Secret Manager for token generation
+- Installed `@google-cloud/secret-manager` package
+- Removed `mailsender_api` and `EMAIL_SECRET` from `.env.local` — all secrets now in Secret Manager
+- Secret path: `projects/83155172875/secrets/mailersend-email-MAILERSEND_API_KEY`
