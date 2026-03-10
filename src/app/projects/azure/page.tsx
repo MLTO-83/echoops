@@ -1013,17 +1013,17 @@ export default function AzureProjects() {
         {/* Header section - Updated to match the requested layout */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="font-display text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white tracking-tight">
+            <h1 className="font-display text-4xl sm:text-5xl font-bold text-foreground tracking-tight">
               Azure DevOps Projects
             </h1>
-            <p className="text-gray-700 dark:text-white mt-1">
+            <p className="text-muted-foreground mt-1">
               Manage and monitor your development projects
             </p>
           </div>
 
           <Link
             href="/dashboard"
-            className="button-neo border-primary dark:border-primary text-gray-900 dark:text-white hover:bg-primary/10 
+            className="button-neo text-foreground hover:bg-primary/10 
                    transition-all duration-300 flex items-center gap-2"
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
@@ -1050,7 +1050,7 @@ export default function AzureProjects() {
           // Loading state
           <div className="card-spatial flex flex-col justify-center items-center py-16">
             <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary mb-4"></div>
-            <p className="text-xl text-gray-700 dark:text-white animate-pulse">
+            <p className="text-xl text-muted-foreground animate-pulse">
               {refreshingFromADO
                 ? "Refreshing projects from Azure DevOps..."
                 : "Loading projects from database..."}
@@ -1082,7 +1082,7 @@ export default function AzureProjects() {
                 </h3>
               </div>
 
-              <p className="text-gray-700 dark:text-white mb-8 pl-16 max-w-xl">
+              <p className="text-muted-foreground mb-8 pl-16 max-w-xl">
                 To view and manage your Azure DevOps projects, you need to
                 configure your Personal Access Token (PAT) first.
               </p>
@@ -1142,7 +1142,7 @@ export default function AzureProjects() {
                 </h3>
               </div>
 
-              <p className="text-gray-700 dark:text-white mb-8 pl-16 max-w-xl">
+              <p className="text-muted-foreground mb-8 pl-16 max-w-xl">
                 {error}
               </p>
 
@@ -1178,7 +1178,7 @@ export default function AzureProjects() {
             <div className="relative z-10">
               <div className="mb-6 flex items-center">
                 <svg
-                  className="h-8 w-8 text-gray-700 dark:text-white mr-4"
+                  className="h-8 w-8 text-muted-foreground mr-4"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -1190,12 +1190,12 @@ export default function AzureProjects() {
                     d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1.994 1.994 0 006.586 13H4"
                   />
                 </svg>
-                <h3 className="font-display text-2xl font-bold text-gray-900 dark:text-white">
+                <h3 className="font-display text-2xl font-bold text-foreground">
                   No Projects Found
                 </h3>
               </div>
 
-              <p className="text-gray-700 dark:text-white mb-8 pl-16 max-w-xl">
+              <p className="text-muted-foreground mb-8 pl-16 max-w-xl">
                 No Azure DevOps projects found in the database. Click refresh to
                 fetch projects from Azure DevOps.
               </p>
@@ -1229,12 +1229,12 @@ export default function AzureProjects() {
           <>
             {/* Project count and actions - Positioned below the header as requested */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 py-2">
-              <p className="text-gray-700 dark:text-white text-base">
-                <span className="font-medium text-gray-900 dark:text-white">
+              <p className="text-muted-foreground text-base">
+                <span className="font-medium text-foreground">
                   {projects.length} projects found in your organization
                 </span>{" "}
                 {!refreshingFromADO && (
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                  <span className="text-sm text-muted-foreground">
                     (database data)
                   </span>
                 )}
@@ -1277,19 +1277,19 @@ export default function AzureProjects() {
                 <table className="min-w-full">
                   <thead className="bg-background-secondary/70">
                     <tr>
-                      <th className="py-3 px-4 text-left text-xs font-medium text-gray-700 dark:text-white uppercase tracking-wider border-b border-border/30">
+                      <th className="py-3 px-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider border-b border-border/30">
                         Name
                       </th>
-                      <th className="py-3 px-4 text-left text-xs font-medium text-gray-700 dark:text-white uppercase tracking-wider border-b border-border/30">
+                      <th className="py-3 px-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider border-b border-border/30">
                         State
                       </th>
-                      <th className="py-3 px-4 text-left text-xs font-medium text-gray-700 dark:text-white uppercase tracking-wider border-b border-border/30">
+                      <th className="py-3 px-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider border-b border-border/30">
                         Members
                       </th>
-                      <th className="py-3 px-4 text-left text-xs font-medium text-gray-700 dark:text-white uppercase tracking-wider border-b border-border/30">
+                      <th className="py-3 px-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider border-b border-border/30">
                         Last Updated
                       </th>
-                      <th className="py-3 px-4 text-right text-xs font-medium text-gray-700 dark:text-white uppercase tracking-wider border-b border-border/30">
+                      <th className="py-3 px-4 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider border-b border-border/30">
                         Actions
                       </th>
                     </tr>
@@ -1326,7 +1326,7 @@ export default function AzureProjects() {
                               className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
                               ${
                                 project.state?.id === "new"
-                                  ? "bg-gray-100 text-gray-800 dark:bg-gray-700/50 dark:text-gray-300"
+                                  ? "bg-gray-100 text-foreground/80 dark:bg-muted dark:text-muted-foreground"
                                   : project.state?.id === "approved"
                                     ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
                                     : project.state?.id === "in_progress"
@@ -1339,7 +1339,7 @@ export default function AzureProjects() {
                                             ? "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300"
                                             : project.state?.id === "cancelled"
                                               ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
-                                              : "bg-gray-100 text-gray-800 dark:bg-gray-700/50 dark:text-gray-300"
+                                              : "bg-gray-100 text-foreground/80 dark:bg-muted dark:text-muted-foreground"
                               }`}
                             >
                               {project.state?.name || "Unknown"}
@@ -1347,14 +1347,14 @@ export default function AzureProjects() {
                           </div>
                         </td>
                         <td className="py-4 px-4">
-                          <div className="text-sm text-gray-700 dark:text-white">
+                          <div className="text-sm text-muted-foreground">
                             <span className="font-medium">
                               {project.memberCount || 0} members
                             </span>
                           </div>
                         </td>
                         <td className="py-4 px-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-700 dark:text-white">
+                          <div className="text-sm text-muted-foreground">
                             {new Date(project.lastUpdated).toLocaleDateString(
                               undefined,
                               {
@@ -1377,7 +1377,7 @@ export default function AzureProjects() {
                                   hover:bg-primary/80 hover:-translate-y-0.5 transition duration-200 border border-primary/50 shadow-sm"
                             aria-label={`View details for ${project.name}`}
                           >
-                            <span className="text-gray-900 dark:text-white">
+                            <span className="text-foreground">
                               Details
                             </span>
                           </button>
@@ -1387,12 +1387,12 @@ export default function AzureProjects() {
                               href={project.url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center px-3 py-1 text-xs bg-background-secondary text-gray-900 dark:text-white rounded-md 
+                              className="inline-flex items-center px-3 py-1 text-xs bg-background-secondary text-foreground rounded-md 
                                      hover:bg-background-secondary/80 hover:-translate-y-0.5 transition duration-200 border border-border/30 shadow-sm"
                               aria-label={`Open ${project.name} in Azure DevOps`}
                             >
                               <svg
-                                className="h-3 w-3 mr-1 text-gray-900 dark:text-white"
+                                className="h-3 w-3 mr-1 text-foreground"
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"

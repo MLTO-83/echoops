@@ -455,10 +455,10 @@ export default function SettingsPage() {
       <div className="w-full max-w-5xl space-y-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative">
           <div className="space-y-2">
-            <h1 className="font-display text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900 dark:text-white tracking-tight relative z-10">
+            <h1 className="font-display text-4xl sm:text-5xl md:text-6xl font-bold text-foreground tracking-tight relative z-10">
               Settings
             </h1>
-            <p className="text-gray-800 dark:text-white max-w-lg">
+            <p className="text-foreground/90 max-w-lg">
               Configure your organization and integration preferences
             </p>
           </div>
@@ -466,7 +466,7 @@ export default function SettingsPage() {
           <div className="flex items-center gap-4">
             {/* Theme Toggle Component */}
             <div className="flex items-center gap-2 p-2 bg-background-secondary/20 rounded-lg">
-              <span className="text-sm text-gray-800 dark:text-white">
+              <span className="text-sm text-foreground/90">
                 Theme:
               </span>
               <ThemeToggle />
@@ -512,14 +512,14 @@ export default function SettingsPage() {
 
           <div className="relative z-10">
             <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-4">
-              <h2 className="text-2xl font-bold font-display text-gray-900 dark:text-white">
+              <h2 className="text-2xl font-bold font-display text-foreground">
                 Azure DevOps Integration
               </h2>
 
               {adoFetching ? (
                 <div className="flex items-center space-x-2 mt-2 md:mt-0">
                   <div className="animate-spin h-4 w-4 border-2 border-primary rounded-full border-t-transparent"></div>
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                  <span className="text-sm text-muted-foreground">
                     Loading configuration...
                   </span>
                 </div>
@@ -539,7 +539,7 @@ export default function SettingsPage() {
 
             {adoConfigured && (
               <div className="mb-4 p-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
-                <p className="text-sm text-gray-700 dark:text-gray-300">
+                <p className="text-sm text-muted-foreground">
                   <span className="font-medium">Status:</span> Configuration
                   found in database
                   {organizationId && (
@@ -559,7 +559,7 @@ export default function SettingsPage() {
 
             <div className="space-y-4">
               <label className="flex flex-col">
-                <span className="text-gray-800 dark:text-white mb-1">
+                <span className="text-foreground/90 mb-1">
                   Organization Name
                 </span>
                 <input
@@ -577,7 +577,7 @@ export default function SettingsPage() {
                 )}
               </label>
               <label className="flex flex-col">
-                <span className="text-gray-800 dark:text-white mb-1">
+                <span className="text-foreground/90 mb-1">
                   Organization URL
                 </span>
                 <input
@@ -589,7 +589,7 @@ export default function SettingsPage() {
                 />
               </label>
               <label className="flex flex-col">
-                <span className="text-gray-800 dark:text-white mb-1">
+                <span className="text-foreground/90 mb-1">
                   Personal Access Token (PAT)
                 </span>
                 <input
@@ -599,7 +599,7 @@ export default function SettingsPage() {
                   placeholder="Your PAT token"
                   className="input-neo"
                 />
-                <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                <span className="text-xs text-muted-foreground mt-1">
                   {pat
                     ? "PAT is set" + (adoConfigured ? " and saved" : "")
                     : "No PAT configured"}
@@ -688,14 +688,14 @@ export default function SettingsPage() {
 
           <div className="relative z-10">
             <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-4">
-              <h2 className="text-2xl font-bold font-display text-gray-900 dark:text-white">
+              <h2 className="text-2xl font-bold font-display text-foreground">
                 AI Provider Configuration
               </h2>
 
               {aiFetching ? (
                 <div className="flex items-center space-x-2 mt-2 md:mt-0">
                   <div className="animate-spin h-4 w-4 border-2 border-accent rounded-full border-t-transparent"></div>
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                  <span className="text-sm text-muted-foreground">
                     Loading configuration...
                   </span>
                 </div>
@@ -715,7 +715,7 @@ export default function SettingsPage() {
 
             {aiConfigured && (
               <div className="mb-4 p-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
-                <p className="text-sm text-gray-700 dark:text-gray-300">
+                <p className="text-sm text-muted-foreground">
                   <span className="font-medium">Status:</span> Configuration
                   found in database
                   {aiProvider && (
@@ -734,7 +734,7 @@ export default function SettingsPage() {
 
             <div className="space-y-4">
               <label className="flex flex-col">
-                <span className="text-gray-800 dark:text-white mb-1">
+                <span className="text-foreground/90 mb-1">
                   Provider
                 </span>
                 <input
@@ -746,7 +746,7 @@ export default function SettingsPage() {
                 />
               </label>
               <label className="flex flex-col">
-                <span className="text-gray-800 dark:text-white mb-1">
+                <span className="text-foreground/90 mb-1">
                   API Key
                 </span>
                 <input
@@ -757,7 +757,7 @@ export default function SettingsPage() {
                 />
               </label>
               <label className="flex flex-col">
-                <span className="text-gray-800 dark:text-white mb-1">
+                <span className="text-foreground/90 mb-1">
                   Model
                 </span>
                 <input
@@ -770,7 +770,7 @@ export default function SettingsPage() {
               </label>
               <div className="flex gap-4">
                 <label className="flex flex-col flex-1">
-                  <span className="text-gray-800 dark:text-white mb-1">
+                  <span className="text-foreground/90 mb-1">
                     Temperature
                   </span>
                   <input
@@ -784,7 +784,7 @@ export default function SettingsPage() {
                   />
                 </label>
                 <label className="flex flex-col flex-1">
-                  <span className="text-gray-800 dark:text-white mb-1">
+                  <span className="text-foreground/90 mb-1">
                     Max Tokens
                   </span>
                   <input
@@ -822,12 +822,12 @@ export default function SettingsPage() {
 
               {/* AI Test Section */}
               <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+                <h3 className="text-lg font-semibold text-foreground mb-3">
                   Test AI Provider
                 </h3>
                 <div className="space-y-4">
                   <label className="flex flex-col">
-                    <span className="text-gray-800 dark:text-white mb-1">
+                    <span className="text-foreground/90 mb-1">
                       Test Prompt
                     </span>
                     <input
@@ -841,7 +841,7 @@ export default function SettingsPage() {
 
                   {aiTestResponse && (
                     <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
-                      <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
+                      <p className="text-sm text-foreground/80 whitespace-pre-wrap">
                         {aiTestResponse}
                       </p>
                     </div>
@@ -920,12 +920,12 @@ export default function SettingsPage() {
           <div className="absolute top-0 right-0 w-24 h-24 bg-secondary/10 rounded-full blur-xl transform translate-x-12 -translate-y-1/2 group-hover:translate-x-8 transition-all duration-700"></div>
 
           <div className="relative z-10">
-            <h2 className="text-2xl font-bold font-display text-gray-900 dark:text-white mb-4">
+            <h2 className="text-2xl font-bold font-display text-foreground mb-4">
               AI Agent User
             </h2>
             <div className="space-y-4">
               <label className="flex flex-col">
-                <span className="text-gray-800 dark:text-white mb-1">
+                <span className="text-foreground/90 mb-1">
                   Select agent user
                 </span>
                 <select
@@ -987,14 +987,14 @@ export default function SettingsPage() {
 
           <div className="relative z-10">
             <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-4">
-              <h2 className="text-2xl font-bold font-display text-gray-900 dark:text-white">
+              <h2 className="text-2xl font-bold font-display text-foreground">
                 SSO / SAML Configuration
               </h2>
 
               {ssoFetching ? (
                 <div className="flex items-center space-x-2 mt-2 md:mt-0">
                   <div className="animate-spin h-4 w-4 border-2 border-blue-500 rounded-full border-t-transparent"></div>
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                  <span className="text-sm text-muted-foreground">
                     Loading configuration...
                   </span>
                 </div>
@@ -1011,13 +1011,13 @@ export default function SettingsPage() {
               )}
             </div>
 
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            <p className="text-sm text-muted-foreground mb-4">
               Configure SAML SSO to allow your team to sign in through your corporate identity provider (Okta, Azure AD, etc.)
             </p>
 
             <div className="space-y-4">
               <label className="flex flex-col">
-                <span className="text-gray-800 dark:text-white mb-1">
+                <span className="text-foreground/90 mb-1">
                   Email Domain
                 </span>
                 <input
@@ -1028,12 +1028,12 @@ export default function SettingsPage() {
                   className="input-neo"
                   disabled={ssoEnabled}
                 />
-                <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                <span className="text-xs text-muted-foreground mt-1">
                   Users with this email domain will be prompted to use SSO
                 </span>
               </label>
               <label className="flex flex-col">
-                <span className="text-gray-800 dark:text-white mb-1">
+                <span className="text-foreground/90 mb-1">
                   IdP Entity ID
                 </span>
                 <input
@@ -1045,7 +1045,7 @@ export default function SettingsPage() {
                 />
               </label>
               <label className="flex flex-col">
-                <span className="text-gray-800 dark:text-white mb-1">
+                <span className="text-foreground/90 mb-1">
                   SSO URL (Single Sign-On URL)
                 </span>
                 <input
@@ -1057,7 +1057,7 @@ export default function SettingsPage() {
                 />
               </label>
               <label className="flex flex-col">
-                <span className="text-gray-800 dark:text-white mb-1">
+                <span className="text-foreground/90 mb-1">
                   X.509 Certificate
                 </span>
                 <textarea
@@ -1086,17 +1086,17 @@ export default function SettingsPage() {
               {/* SP Metadata display (after successful config) */}
               {ssoEnabled && spMetadata && (
                 <div className="mt-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg space-y-3">
-                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                  <h3 className="text-sm font-semibold text-foreground">
                     Service Provider Metadata
                   </h3>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                  <p className="text-xs text-muted-foreground">
                     Provide these values to your identity provider:
                   </p>
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between p-2 bg-white dark:bg-gray-700 rounded">
+                    <div className="flex items-center justify-between p-2 bg-card rounded">
                       <div className="min-w-0 flex-1 mr-2">
-                        <span className="block text-xs font-medium text-gray-500 dark:text-gray-400">ACS URL</span>
-                        <span className="block text-sm text-gray-900 dark:text-white truncate">{spMetadata.acsUrl}</span>
+                        <span className="block text-xs font-medium text-muted-foreground">ACS URL</span>
+                        <span className="block text-sm text-foreground truncate">{spMetadata.acsUrl}</span>
                       </div>
                       <button
                         onClick={() => copyToClipboard(spMetadata.acsUrl, "acsUrl")}
@@ -1105,10 +1105,10 @@ export default function SettingsPage() {
                         {copiedField === "acsUrl" ? "Copied!" : "Copy"}
                       </button>
                     </div>
-                    <div className="flex items-center justify-between p-2 bg-white dark:bg-gray-700 rounded">
+                    <div className="flex items-center justify-between p-2 bg-card rounded">
                       <div className="min-w-0 flex-1 mr-2">
-                        <span className="block text-xs font-medium text-gray-500 dark:text-gray-400">SP Entity ID</span>
-                        <span className="block text-sm text-gray-900 dark:text-white truncate">{spMetadata.entityId}</span>
+                        <span className="block text-xs font-medium text-muted-foreground">SP Entity ID</span>
+                        <span className="block text-sm text-foreground truncate">{spMetadata.entityId}</span>
                       </div>
                       <button
                         onClick={() => copyToClipboard(spMetadata.entityId, "entityId")}

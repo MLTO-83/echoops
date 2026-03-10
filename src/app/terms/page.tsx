@@ -12,17 +12,17 @@ export default function Terms() {
         {/* Header section */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative">
           <div className="space-y-1">
-            <h1 className="font-display text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white tracking-tight">
+            <h1 className="font-display text-4xl sm:text-5xl font-bold text-foreground tracking-tight">
               Terms of Service
             </h1>
-            <p className="text-gray-700 dark:text-white">
+            <p className="text-muted-foreground">
               Legal agreement governing use of our platform
             </p>
           </div>
 
           <Link
             href="/"
-            className="button-neo border-primary dark:border-primary text-gray-900 dark:text-white hover:bg-primary/10 
+            className="button-neo text-foreground hover:bg-primary/10 
                      transition-all duration-300 flex items-center gap-2"
           >
             <svg
@@ -47,8 +47,8 @@ export default function Terms() {
         <div className="card-spatial relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-2xl transform translate-x-1/3 -translate-y-1/2"></div>
 
-          <div className="prose prose-lg max-w-none relative z-10 text-gray-700 dark:text-white">
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">
+          <div className="prose prose-lg max-w-none relative z-10 text-foreground/80">
+            <p className="text-sm text-muted-foreground mb-8">
               Last updated: April 20, 2025
             </p>
 
@@ -59,7 +59,7 @@ export default function Terms() {
             </p>
 
             <div className="card-neo p-6 mb-10 mt-8">
-              <h2 className="text-2xl font-display font-semibold text-gray-900 dark:text-white mb-4">
+              <h2 className="text-2xl font-display font-semibold text-foreground mb-4">
                 1. Acceptance of Terms
               </h2>
               <p>
@@ -71,7 +71,7 @@ export default function Terms() {
             </div>
 
             <div className="card-neo p-6 mb-10">
-              <h2 className="text-2xl font-display font-semibold text-gray-900 dark:text-white mb-4">
+              <h2 className="text-2xl font-display font-semibold text-foreground mb-4">
                 2. Changes to Terms
               </h2>
               <p>
@@ -83,7 +83,7 @@ export default function Terms() {
             </div>
 
             <div className="card-neo p-6 mb-10">
-              <h2 className="text-2xl font-display font-semibold text-gray-900 dark:text-white mb-4">
+              <h2 className="text-2xl font-display font-semibold text-foreground mb-4">
                 3. Account Registration
               </h2>
               <p className="mb-3">
@@ -119,7 +119,7 @@ export default function Terms() {
             </div>
 
             <div className="card-neo p-6 mb-10">
-              <h2 className="text-2xl font-display font-semibold text-gray-900 dark:text-white mb-4">
+              <h2 className="text-2xl font-display font-semibold text-foreground mb-4">
                 4. Subscription and Billing
               </h2>
               <div className="space-y-4">
@@ -154,7 +154,7 @@ export default function Terms() {
                     key={i}
                     className="bg-background-secondary/30 dark:bg-background-secondary/20 p-4 rounded-md"
                   >
-                    <h3 className="font-medium text-gray-900 dark:text-white mb-2">
+                    <h3 className="font-medium text-foreground mb-2">
                       {section.title}
                     </h3>
                     <p>{section.content}</p>
@@ -164,7 +164,7 @@ export default function Terms() {
             </div>
 
             <div className="card-neo p-6 mb-10">
-              <h2 className="text-2xl font-display font-semibold text-gray-900 dark:text-white mb-4">
+              <h2 className="text-2xl font-display font-semibold text-foreground mb-4">
                 5. User Conduct
               </h2>
               <p className="mb-3">You agree not to use the Services to:</p>
@@ -202,7 +202,7 @@ export default function Terms() {
             </div>
 
             <div className="card-neo p-6 mb-10">
-              <h2 className="text-2xl font-display font-semibold text-gray-900 dark:text-white mb-4">
+              <h2 className="text-2xl font-display font-semibold text-foreground mb-4">
                 6. Third-Party Integrations
               </h2>
               <p>
@@ -215,12 +215,12 @@ export default function Terms() {
             </div>
 
             <div className="card-neo p-6 mb-10">
-              <h2 className="text-2xl font-display font-semibold text-gray-900 dark:text-white mb-4">
+              <h2 className="text-2xl font-display font-semibold text-foreground mb-4">
                 7. Intellectual Property Rights
               </h2>
               <div className="space-y-4">
                 <div className="bg-background-secondary/30 dark:bg-background-secondary/20 p-4 rounded-md">
-                  <h3 className="font-medium text-gray-900 dark:text-white mb-2">
+                  <h3 className="font-medium text-foreground mb-2">
                     7.1 EchoOps Content
                   </h3>
                   <p>
@@ -232,7 +232,7 @@ export default function Terms() {
                   </p>
                 </div>
                 <div className="bg-background-secondary/30 dark:bg-background-secondary/20 p-4 rounded-md">
-                  <h3 className="font-medium text-gray-900 dark:text-white mb-2">
+                  <h3 className="font-medium text-foreground mb-2">
                     7.2 User Content
                   </h3>
                   <p>
@@ -248,7 +248,7 @@ export default function Terms() {
             </div>
 
             <div className="card-neo p-6 mb-10 border-l-2 border-warning">
-              <h2 className="text-2xl font-display font-semibold text-gray-900 dark:text-white mb-4">
+              <h2 className="text-2xl font-display font-semibold text-foreground mb-4">
                 8. Limitation of Liability
               </h2>
               <p className="bg-background-secondary/30 dark:bg-background-secondary/20 p-4 rounded-md uppercase text-sm font-medium tracking-wider">
@@ -263,7 +263,7 @@ export default function Terms() {
             </div>
 
             <div className="card-neo p-6 mb-10">
-              <h2 className="text-2xl font-display font-semibold text-gray-900 dark:text-white mb-4">
+              <h2 className="text-2xl font-display font-semibold text-foreground mb-4">
                 9. Termination
               </h2>
               <p>
@@ -276,7 +276,7 @@ export default function Terms() {
             </div>
 
             <div className="card-neo p-6 mb-10">
-              <h2 className="text-2xl font-display font-semibold text-gray-900 dark:text-white mb-4">
+              <h2 className="text-2xl font-display font-semibold text-foreground mb-4">
                 10. Governing Law
               </h2>
               <p>
@@ -289,7 +289,7 @@ export default function Terms() {
             </div>
 
             <div className="card-neo p-6 mb-10">
-              <h2 className="text-2xl font-display font-semibold text-gray-900 dark:text-white mb-4">
+              <h2 className="text-2xl font-display font-semibold text-foreground mb-4">
                 11. Contact Information
               </h2>
               <p className="mb-6">
@@ -320,46 +320,6 @@ export default function Terms() {
                     support@echoops.org
                   </a>
                 </div>
-                <div className="flex items-center gap-2 mb-2">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5 text-primary"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                    />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
-                  </svg>
-                  <span>Address: Carl Jensens Vej 29</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5 text-primary"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  <span>City: Aarhus, Denmark</span>
-                </div>
               </div>
             </div>
           </div>
@@ -370,31 +330,31 @@ export default function Terms() {
       <footer className="w-full max-w-6xl mt-auto pt-8">
         <div className="border-t border-border/30 py-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="text-gray-500 dark:text-gray-400 mb-4 md:mb-0">
+            <div className="text-muted-foreground mb-4 md:mb-0">
               © {new Date().getFullYear()} EchoOps. All rights reserved.
             </div>
             <div className="flex space-x-6">
               <Link
                 href="/about"
-                className="text-gray-500 dark:text-gray-400 hover:text-primary"
+                className="text-muted-foreground hover:text-primary"
               >
                 About
               </Link>
               <Link
                 href="/how-to"
-                className="text-gray-500 dark:text-gray-400 hover:text-primary"
+                className="text-muted-foreground hover:text-primary"
               >
                 How To
               </Link>
               <Link
                 href="/privacy"
-                className="text-gray-500 dark:text-gray-400 hover:text-primary"
+                className="text-muted-foreground hover:text-primary"
               >
                 Privacy
               </Link>
               <Link
                 href="/terms"
-                className="text-gray-500 dark:text-gray-400 hover:text-primary"
+                className="text-muted-foreground hover:text-primary"
               >
                 Terms of Service
               </Link>

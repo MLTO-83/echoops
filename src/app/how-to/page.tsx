@@ -12,17 +12,17 @@ export default function HowTo() {
         {/* Header section */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative">
           <div className="space-y-1">
-            <h1 className="font-display text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white tracking-tight">
+            <h1 className="font-display text-4xl sm:text-5xl font-bold text-foreground tracking-tight">
               How To Use EchoOps
             </h1>
-            <p className="text-gray-700 dark:text-white">
+            <p className="text-muted-foreground">
               A guide to getting started with our platform
             </p>
           </div>
 
           <Link
             href="/"
-            className="button-neo border-primary dark:border-primary text-gray-900 dark:text-white hover:bg-primary/10 
+            className="button-neo text-foreground hover:bg-primary/10 
                      transition-all duration-300 flex items-center gap-2"
           >
             <svg
@@ -47,19 +47,19 @@ export default function HowTo() {
         <div className="card-spatial relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-2xl transform translate-x-1/3 -translate-y-1/2"></div>
 
-          <div className="prose prose-lg max-w-none relative z-10 text-gray-700 dark:text-white">
+          <div className="prose prose-lg max-w-none relative z-10 text-foreground/80">
             <p className="text-lg">
               Welcome to EchoOps! This guide will help you get started and make
               the most of our project management platform.
             </p>
 
             <div className="mb-12 border-b border-border/30 pb-8">
-              <h2 className="text-2xl font-display font-semibold text-gray-900 dark:text-white mb-6">
+              <h2 className="text-2xl font-display font-semibold text-foreground mb-6">
                 Getting Started
               </h2>
 
               <div className="card-neo p-6 mb-8">
-                <h3 className="text-xl font-display font-medium text-gray-900 dark:text-white mb-3">
+                <h3 className="text-xl font-display font-medium text-foreground mb-3">
                   1. Create Your Account
                 </h3>
                 <p className="mb-3">
@@ -67,7 +67,7 @@ export default function HowTo() {
                   provide your email address and create a password.
                 </p>
                 <div className="bg-primary/10 dark:bg-primary/20 p-4 rounded-lg">
-                  <p className="text-sm text-gray-900 dark:text-white">
+                  <p className="text-sm text-foreground">
                     <strong>Pro Tip:</strong> If your organization already uses
                     EchoOps, ask your administrator for an invitation link to
                     join your team directly.
@@ -76,7 +76,7 @@ export default function HowTo() {
               </div>
 
               <div className="card-neo p-6 mb-8">
-                <h3 className="text-xl font-display font-medium text-gray-900 dark:text-white mb-3">
+                <h3 className="text-xl font-display font-medium text-foreground mb-3">
                   2. Set Up Your Organization
                 </h3>
                 <p className="mb-3">
@@ -112,7 +112,7 @@ export default function HowTo() {
               </div>
 
               <div className="card-neo p-6 mb-8">
-                <h3 className="text-xl font-display font-medium text-gray-900 dark:text-white mb-3">
+                <h3 className="text-xl font-display font-medium text-foreground mb-3">
                   3. Connect Your Services
                 </h3>
                 <p className="mb-3">
@@ -149,12 +149,12 @@ export default function HowTo() {
             </div>
 
             <div className="mb-12 border-b border-border/30 pb-8">
-              <h2 className="text-2xl font-display font-semibold text-gray-900 dark:text-white mb-6">
+              <h2 className="text-2xl font-display font-semibold text-foreground mb-6">
                 Managing Projects
               </h2>
 
               <div className="card-neo p-6 mb-8">
-                <h3 className="text-xl font-display font-medium text-gray-900 dark:text-white mb-3">
+                <h3 className="text-xl font-display font-medium text-foreground mb-3">
                   Adding Projects
                 </h3>
                 <p className="mb-3">
@@ -179,7 +179,7 @@ export default function HowTo() {
               </div>
 
               <div className="card-neo p-6 mb-8">
-                <h3 className="text-xl font-display font-medium text-gray-900 dark:text-white mb-3">
+                <h3 className="text-xl font-display font-medium text-foreground mb-3">
                   Using Tags
                 </h3>
                 <p className="mb-3">
@@ -214,13 +214,13 @@ export default function HowTo() {
             </div>
 
             <div className="mb-12 border-b border-border/30 pb-8">
-              <h2 className="text-2xl font-display font-semibold text-gray-900 dark:text-white mb-6">
+              <h2 className="text-2xl font-display font-semibold text-foreground mb-6">
                 Advanced Features
               </h2>
 
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="card-neo p-6">
-                  <h3 className="text-xl font-display font-medium text-gray-900 dark:text-white mb-3">
+                  <h3 className="text-xl font-display font-medium text-foreground mb-3">
                     Reporting
                   </h3>
                   <p className="mb-3">
@@ -255,7 +255,7 @@ export default function HowTo() {
                 </div>
 
                 <div className="card-neo p-6">
-                  <h3 className="text-xl font-display font-medium text-gray-900 dark:text-white mb-3">
+                  <h3 className="text-xl font-display font-medium text-foreground mb-3">
                     Collaboration Tools
                   </h3>
                   <p className="mb-3">
@@ -292,7 +292,7 @@ export default function HowTo() {
             </div>
 
             <div className="mt-8">
-              <h2 className="text-2xl font-display font-semibold text-gray-900 dark:text-white mb-4">
+              <h2 className="text-2xl font-display font-semibold text-foreground mb-4">
                 Need More Help?
               </h2>
               <p className="mb-6">
@@ -300,7 +300,7 @@ export default function HowTo() {
                 here to help.
               </p>
               <div className="card-neo p-6">
-                <h3 className="text-lg font-display font-medium text-gray-900 dark:text-white mb-3">
+                <h3 className="text-lg font-display font-medium text-foreground mb-3">
                   Support Resources
                 </h3>
                 <ul className="list-none pl-0 space-y-3">
@@ -399,31 +399,31 @@ export default function HowTo() {
       <footer className="w-full max-w-6xl mt-auto pt-8">
         <div className="border-t border-border/30 py-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="text-gray-500 dark:text-gray-400 mb-4 md:mb-0">
+            <div className="text-muted-foreground mb-4 md:mb-0">
               © {new Date().getFullYear()} EchoOps. All rights reserved.
             </div>
             <div className="flex space-x-6">
               <Link
                 href="/about"
-                className="text-gray-500 dark:text-gray-400 hover:text-primary"
+                className="text-muted-foreground hover:text-primary"
               >
                 About
               </Link>
               <Link
                 href="/how-to"
-                className="text-gray-500 dark:text-gray-400 hover:text-primary"
+                className="text-muted-foreground hover:text-primary"
               >
                 How To
               </Link>
               <Link
                 href="/privacy"
-                className="text-gray-500 dark:text-gray-400 hover:text-primary"
+                className="text-muted-foreground hover:text-primary"
               >
                 Privacy
               </Link>
               <Link
                 href="/terms"
-                className="text-gray-500 dark:text-gray-400 hover:text-primary"
+                className="text-muted-foreground hover:text-primary"
               >
                 Terms of Service
               </Link>

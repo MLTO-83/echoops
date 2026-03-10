@@ -57,7 +57,7 @@ export default function WelcomeModal({
 
       {/* Modal */}
       <div className="fixed inset-0 flex items-center justify-center p-4 z-50">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full overflow-hidden">
+        <div className="bg-card text-card-foreground rounded-lg shadow-xl max-w-md w-full overflow-hidden">
           {/* Modal header */}
           <div className="bg-gradient-to-r from-primary to-secondary p-6 text-white">
             <div className="flex justify-between items-center">
@@ -176,7 +176,7 @@ export default function WelcomeModal({
             <div className="text-center mt-4">
               <button
                 onClick={handleClose}
-                className="text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary text-sm font-medium"
+                className="text-muted-foreground hover:text-primary text-sm font-medium"
               >
                 I'll do this later
               </button>

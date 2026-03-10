@@ -15,7 +15,7 @@ const UserAllocationContainer = dynamic(
   {
     ssr: true,
     loading: () => (
-      <div className="w-full bg-white text-black rounded-2xl shadow-lg p-6 min-h-[400px] flex items-center justify-center">
+      <div className="w-full bg-card text-card-foreground rounded-2xl shadow-lg p-6 min-h-[400px] flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>
     ),
@@ -76,10 +76,10 @@ export default function Dashboard() {
       <div className="w-full max-w-5xl space-y-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative">
           <div className="space-y-2">
-            <h1 className="font-display text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900 dark:text-white tracking-tight relative z-10">
+            <h1 className="font-display text-4xl sm:text-5xl md:text-6xl font-bold text-foreground tracking-tight relative z-10">
               Dashboard
             </h1>
-            <p className="text-gray-800 dark:text-white max-w-lg">
+            <p className="text-muted-foreground max-w-lg">
               Welcome back to your Azure DevOps projects workspace
             </p>
           </div>
@@ -98,10 +98,10 @@ export default function Dashboard() {
         <div className="card-spatial relative overflow-hidden">
           <div className="absolute top-0 right-0 -mt-6 -mr-6 w-32 h-32 bg-primary/10 rounded-full blur-2xl"></div>
 
-          <h2 className="font-display text-xl font-semibold mb-2 text-gray-900 dark:text-white">
+          <h2 className="font-display text-xl font-semibold mb-2 text-foreground">
             Welcome, {session?.user?.name || "User"}!
           </h2>
-          <p className="text-gray-800 dark:text-white">
+          <p className="text-muted-foreground">
             You are now signed in to EchoOps. Manage your Azure DevOps projects
             and track development progress.
           </p>
@@ -137,10 +137,10 @@ export default function Dashboard() {
             <div className="absolute top-0 right-0 w-24 h-24 bg-primary/10 rounded-full blur-xl transform translate-x-12 -translate-y-1/2 group-hover:translate-x-8 transition-all duration-700"></div>
 
             <div className="relative z-10">
-              <h3 className="text-2xl font-bold font-display text-gray-900 dark:text-white mb-4">
+              <h3 className="text-2xl font-bold font-display text-foreground mb-4">
                 Azure DevOps Projects
               </h3>
-              <p className="text-gray-800 dark:text-white mb-6">
+              <p className="text-muted-foreground mb-6">
                 Connect to your Azure DevOps account to view and manage your
                 projects.
               </p>
@@ -182,10 +182,10 @@ export default function Dashboard() {
             <div className="absolute top-0 right-0 w-24 h-24 bg-accent/10 rounded-full blur-xl transform translate-x-12 -translate-y-1/2 group-hover:translate-x-8 transition-all duration-700"></div>
 
             <div className="relative z-10">
-              <h3 className="text-2xl font-bold font-display text-gray-900 dark:text-white mb-4">
+              <h3 className="text-2xl font-bold font-display text-foreground mb-4">
                 Settings
               </h3>
-              <p className="text-gray-800 dark:text-white mb-6">
+              <p className="text-muted-foreground mb-6">
                 Configure Azure DevOps integration with Personal Access Token
                 (PAT)
               </p>

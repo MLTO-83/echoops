@@ -54,7 +54,7 @@ export default function UserAllocationContainer() {
 
   if (loading) {
     return (
-      <div className="w-full bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 min-h-[400px] flex items-center justify-center">
+      <div className="w-full bg-card rounded-2xl shadow-lg p-6 min-h-[400px] flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
@@ -62,7 +62,7 @@ export default function UserAllocationContainer() {
 
   if (error) {
     return (
-      <div className="w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-2xl shadow-lg p-6">
+      <div className="w-full bg-card text-card-foreground rounded-2xl shadow-lg p-6">
         <div className="text-red-500 dark:text-red-400">Error: {error}</div>
       </div>
     );
@@ -71,7 +71,7 @@ export default function UserAllocationContainer() {
   // Show integration setup message if ADO is not integrated
   if (!adoStatus.isIntegrated) {
     return (
-      <div className="w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-2xl shadow-lg p-6">
+      <div className="w-full bg-card text-card-foreground rounded-2xl shadow-lg p-6">
         <div className="text-center">
           <h3 className="text-lg font-semibold mb-3">
             Azure DevOps Integration Required
@@ -108,7 +108,7 @@ export default function UserAllocationContainer() {
   // Show sync message if ADO is integrated but no data has been synced
   if (!adoStatus.hasSyncedData) {
     return (
-      <div className="w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-2xl shadow-lg p-6">
+      <div className="w-full bg-card text-card-foreground rounded-2xl shadow-lg p-6">
         <div className="text-center">
           <h3 className="text-lg font-semibold mb-3">Sync Required</h3>
           <p className="mb-4">
@@ -142,7 +142,7 @@ export default function UserAllocationContainer() {
 
   // We should only get here if both isIntegrated and hasSyncedData are true
   return (
-    <div className="w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-2xl shadow-lg p-6">
+    <div className="w-full bg-card text-card-foreground rounded-2xl shadow-lg p-6">
       <UserAllocationChart users={users} />
     </div>
   );

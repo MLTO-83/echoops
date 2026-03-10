@@ -31,7 +31,7 @@ export default function Home() {
           <div className="flex space-x-4">
             <Link
               href="/auth/signin"
-              className="button-neo bg-background-secondary text-gray-900 dark:text-white hover:bg-background-secondary/80 transition-all duration-200 font-medium"
+              className="button-neo bg-muted text-foreground hover:bg-muted/80 transition-all duration-200 font-medium"
             >
               Sign In
             </Link>
@@ -57,11 +57,11 @@ export default function Home() {
 
           <div className="lg:grid lg:grid-cols-12 lg:gap-8 relative z-10">
             <div className="lg:col-span-6">
-              <h2 className="font-display text-4xl font-bold text-gray-900 dark:text-white sm:text-5xl tracking-tight">
+              <h2 className="font-display text-4xl font-bold text-foreground sm:text-5xl tracking-tight">
                 Transform PMs into{" "}
                 <span className="text-primary">Product Builders</span>
               </h2>
-              <p className="mt-6 text-xl text-gray-700 dark:text-white">
+              <p className="mt-6 text-xl text-muted-foreground">
                 EchoOps empowers Project Managers to become strategic Product
                 Builders through AI-driven insights. Seamlessly integrate with
                 Azure DevOps, leverage multi-AI capabilities, and transform
@@ -110,7 +110,7 @@ export default function Home() {
                             d="M5 13l4 4L19 7"
                           />
                         </svg>
-                        <span className="text-gray-700 dark:text-white font-medium">
+                        <span className="text-card-foreground font-medium">
                           {feature}
                         </span>
                       </li>
@@ -127,31 +127,31 @@ export default function Home() {
       <footer className="w-full max-w-6xl mt-auto pt-8">
         <div className="border-t border-border/30 py-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="text-gray-500 dark:text-gray-400 mb-4 md:mb-0">
+            <div className="text-muted-foreground mb-4 md:mb-0">
               © {new Date().getFullYear()} EchoOps. All rights reserved.
             </div>
             <div className="flex space-x-6">
               <Link
                 href="/about"
-                className="text-gray-500 dark:text-gray-400 hover:text-primary"
+                className="text-muted-foreground hover:text-primary"
               >
                 About
               </Link>
               <Link
                 href="/how-to"
-                className="text-gray-500 dark:text-gray-400 hover:text-primary"
+                className="text-muted-foreground hover:text-primary"
               >
                 How To
               </Link>
               <Link
                 href="/privacy"
-                className="text-gray-500 dark:text-gray-400 hover:text-primary"
+                className="text-muted-foreground hover:text-primary"
               >
                 Privacy
               </Link>
               <Link
                 href="/terms"
-                className="text-gray-500 dark:text-gray-400 hover:text-primary"
+                className="text-muted-foreground hover:text-primary"
               >
                 Terms of Service
               </Link>
