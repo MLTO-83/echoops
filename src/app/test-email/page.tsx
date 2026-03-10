@@ -10,14 +10,13 @@ export default function TestEmailPage() {
   const [recipient, setRecipient] = useState<string>("");
   const [subject, setSubject] = useState<string>("Test email from EchoOps");
   const [message, setMessage] = useState<string>(
-    "This is a test email sent from the EchoOps platform using Resend."
+    "This is a test email sent from the EchoOps platform using MailerSend."
   );
 
-  // Send verification email to current user
   const sendVerificationEmail = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/email/resend-verify", {
+      const response = await fetch("/api/email/send-verification", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -36,7 +35,6 @@ export default function TestEmailPage() {
     }
   };
 
-  // Send custom email
   const sendCustomEmail = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -52,7 +50,7 @@ export default function TestEmailPage() {
           subject,
           html: `<div style="font-family: Arial, sans-serif; padding: 20px;">
             <h2>Hello from EchoOps!</h2>
-            <p>${message}</p>
+            <p>${message.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
             <p>Best regards,<br/>The EchoOps Team</p>
           </div>`,
         }),

@@ -909,6 +909,18 @@ export const verificationTokens = {
     };
   },
 
+  async findByIdentifier(identifier: string): Promise<VerificationTokenDoc | null> {
+    const snap = await verificationTokensCol.where("identifier", "==", identifier).limit(1).get();
+    if (snap.empty) return null;
+    const doc = snap.docs[0];
+    const data = doc.data();
+    return {
+      identifier: data.identifier,
+      token: data.token,
+      expires: toDate(data.expires) || new Date(),
+    };
+  },
+
   async create(data: VerificationTokenDoc): Promise<VerificationTokenDoc> {
     await verificationTokensCol.add({
       identifier: data.identifier,

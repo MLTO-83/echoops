@@ -1,83 +1,113 @@
-Mailersender how to setup
-See env.local for api key
-Firebase
-About
-Use this extension to send emails that contain the information from documents added to a specified Cloud Firestore collection. Adding a document triggers this extension to send an email built from the document's fields.
+MailerSend - Email Service
 
-Setup
-Install the extension
-Console
-Install this extension on your Firebase project using this link.
+Provider: MailerSend Firebase Extension
+API Key: See `mailsender_api` in `.env.local`
 
-Firebase CLI
-firebase ext:install mailersend/mailersend-email --project=[your-project-id]
-Learn more about installing extensions in the Firebase Extensions documentation: console, CLI.
+## How It Works
 
-Use the extension
-After its installation, this extension monitors all document writes to the EMAIL_COLLECTION collection. Email is sent based on the contents of the document's fields. The document's fields specify an email data.
+The MailerSend Firebase Extension monitors the `emails` Firestore collection.
+When a document is added, the extension reads its fields and sends the email via MailerSend.
 
-Here's a basic example document write that would trigger this extension:
+No direct API calls are made from application code. The app simply writes a document to Firestore.
 
+## Setup
+
+### 1. Install the Firebase Extension
+
+Console: Install from the Firebase Extensions hub.
+
+CLI:
+```
+firebase ext:install mailersend/mailersend-email --project=echoops-65d4b
+```
+
+### 2. Configure MailerSend Dashboard
+
+- Add and verify your sending domain (edit DNS records)
+- Create an API token with full access
+- Add the token to `.env.local` as `mailsender_api`
+
+### 3. Environment Variables
+
+| Variable | Description |
+|---|---|
+| `mailsender_api` | MailerSend API token (in .env.local) |
+| `MAILERSEND_FROM_EMAIL` | Default sender email (default: `noreply@echoops.org`) |
+| `MAILERSEND_FROM_NAME` | Default sender name (default: `EchoOps`) |
+| `EMAIL_SECRET` | **Required.** Secret for generating verification tokens |
+
+## Firestore Document Schema
+
+Adding a document to the `emails` collection triggers the extension:
+
+```js
 admin.firestore().collection('emails').add({
     to: [
-      {
-        email: 'recipient@example.com',
-        name: 'Recipient name'
-      }
+      { email: 'recipient@example.com', name: 'Recipient name' }
     ],
     from: {
-      email: 'from@example.com',
-      name: 'From name'
+      email: 'noreply@echoops.org',
+      name: 'EchoOps'
     },
-    cc: [
-      {
-        email: 'cc.recipient@example.com',
-        name: 'CC recipient name'
-      }
-    ],
-    bcc: [
-      {
-        email: 'bcc.recipient@example.com',
-        name: 'Bcc recipient name'
-      }
-    ],
-    subject: 'Hello from Firebase!',
-    html: 'This is an HTML email body.',
-    text: 'This is an TEXT email body.',
+    subject: 'Hello from EchoOps!',
+    html: '<p>HTML email body</p>',
+    text: 'Plain text email body',
+    // Optional fields:
+    cc: [{ email: 'cc@example.com', name: 'CC name' }],
+    bcc: [{ email: 'bcc@example.com', name: 'BCC name' }],
     template_id: 'abc123ced',
     variables: [
-    {
+      {
         email: 'recipient@example.com',
         substitutions: [
-        {
-            var: 'variable_name',
-            value: 'variable value'
-        }
+          { var: 'variable_name', value: 'variable value' }
         ]
-    }
+      }
     ],
     personalization: [
-    {
+      {
         email: 'recipient@example.com',
-        data: {
-        personalization_name: 'personalization value'
-        }
-    }
+        data: { personalization_name: 'personalization value' }
+      }
     ],
     tags: ['tag1', 'tag2'],
-    reply_to: {
-    email: 'reply_to@example.com',
-        name: 'Reply to name'
-    },
+    reply_to: { email: 'reply@example.com', name: 'Reply name' },
     send_at: '123465789'
 })
-Additional setup
-Before installing this extension, set up the following Firebase service in your Firebase project:
+```
 
-Cloud Firestore collection in your Firebase project.
+## Application Architecture
 
-Then, in the MailerSend dashboard:
+### Shared Email Library
 
-Add a domain and verify it editing your DNS records.
+`src/lib/email.ts` — Provides `sendEmail()` and `sendSimpleEmail()` helpers that write to the `emails` Firestore collection. All email routes use this library.
 
-Create a new API token with full access.
+### API Routes
+
+| Route | Method | Auth | Purpose |
+|---|---|---|---|
+| `/api/email/send` | POST | Yes | Send a generic email (to, subject, html/text) |
+| `/api/email/send-verification` | POST | Yes | Send verification email to current user |
+| `/api/email/verify` | GET | No | Verify email token from URL |
+
+### Frontend
+
+- `EmailVerificationBanner` — Banner shown when email is unverified, calls `/api/email/send-verification`
+- `/auth/verify-email` — Handles verification link clicks, calls `/api/email/verify`
+- `/test-email` — Admin test page for sending verification and custom emails
+
+## Migration Log
+
+**Migrated from Resend + Nodemailer to MailerSend Firebase Extension (2026-03-10)**
+
+Changes made:
+- Created `src/lib/email.ts` — shared email service writing to Firestore `emails` collection
+- Rewrote `/api/email/send` — replaced Resend SDK with Firestore write
+- Rewrote `/api/email/send-verification` — replaced Resend SDK with Firestore write, added old-token cleanup
+- Deleted `/api/email/resend-verify` — was a 100% duplicate of send-verification
+- Deleted `/api/test/email` — unauthenticated endpoint using nodemailer (security risk)
+- Updated `/test-email` page — uses send-verification route, fixed XSS in custom email form
+- Added `verificationTokens.findByIdentifier()` to `src/lib/firebase/db.ts`
+- Removed `resend`, `nodemailer`, and `@types/nodemailer` npm packages
+- Removed hardcoded Resend API key fallback (was leaked in source)
+- Removed hardcoded EMAIL_SECRET fallback — now required as env var
