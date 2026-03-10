@@ -3,12 +3,12 @@
 # Simple Google Gemini API Test Script (no jq dependency)
 # This script tests the Google Gemini API directly using curl
 
-API_KEY="AIzaSyArd5SoUhVSil2LNfMp1T8gu06FqxKA5ME"
+API_KEY="${GOOGLE_API_KEY:?Error: GOOGLE_API_KEY environment variable is not set}"
 MODEL="gemini-2.5-pro-preview-05-06"
 PROMPT="What is the meaning for code review?"
 
 echo "=== Google Gemini API Test ==="
-echo "API Key: $API_KEY"
+echo "API Key: ***${API_KEY: -4}"
 echo "Model: $MODEL"
 echo "Prompt: $PROMPT"
 echo ""
