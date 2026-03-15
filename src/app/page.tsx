@@ -138,6 +138,12 @@ export default function Home() {
                 About
               </Link>
               <Link
+                href="/blog"
+                className="text-muted-foreground hover:text-primary"
+              >
+                Blog
+              </Link>
+              <Link
                 href="/how-to"
                 className="text-muted-foreground hover:text-primary"
               >

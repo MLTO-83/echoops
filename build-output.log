@@ -1,10 +1,103 @@
 
-> portavi@1.0.0 build
+> echoops@1.0.0 build
 > next build
 
-   ▲ Next.js 15.3.2
-   - Environments: .env.local, .env
+   ▲ Next.js 15.3.6
+   - Environments: .env.local
 
    Creating an optimized production build ...
- ✓ Compiled successfully in 13.0s
+Browserslist: browsers data (caniuse-lite) is 11 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+ ✓ Compiled successfully in 6.0s
    Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/51) ...
+   Generating static pages (12/51) 
+   Generating static pages (25/51) 
+   Generating static pages (38/51) 
+ ✓ Generating static pages (51/51)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                                     Size  First Load JS  Revalidate  Expire
+┌ ○ /                                                          196 B         111 kB
+├ ○ /_not-found                                                990 B         103 kB
+├ ○ /about                                                     186 B         105 kB
+├ ƒ /api/ado                                                   267 B         102 kB
+├ ƒ /api/ado/comprehensive-sync                                267 B         102 kB
+├ ƒ /api/ado/config                                            267 B         102 kB
+├ ƒ /api/ado/debug-sync                                        267 B         102 kB
+├ ƒ /api/ado/projects                                          267 B         102 kB
+├ ƒ /api/ado/projects/[projectId]/repos                        267 B         102 kB
+├ ƒ /api/ado/projects/[projectId]/teams                        267 B         102 kB
+├ ƒ /api/ado/projects/[projectId]/teams/[teamId]/members       267 B         102 kB
+├ ƒ /api/ado/sync-members                                      267 B         102 kB
+├ ƒ /api/ado/sync-project                                      267 B         102 kB
+├ ƒ /api/ado/webhook                                           267 B         102 kB
+├ ƒ /api/ado/webhook/diagnose                                  267 B         102 kB
+├ ƒ /api/ado/webhook/signature-debug                           267 B         102 kB
+├ ƒ /api/ado/webhook/test                                      267 B         102 kB
+├ ƒ /api/ai/agent-config                                       267 B         102 kB
+├ ƒ /api/ai/execute                                            267 B         102 kB
+├ ƒ /api/ai/execute/[jobId]                                    267 B         102 kB
+├ ƒ /api/auth/ensure-user                                      267 B         102 kB
+├ ƒ /api/auth/lookup-domain                                    267 B         102 kB
+├ ƒ /api/email/send                                            267 B         102 kB
+├ ƒ /api/email/send-verification                               267 B         102 kB
+├ ƒ /api/email/verify                                          267 B         102 kB
+├ ƒ /api/projects/[projectId]                                  267 B         102 kB
+├ ƒ /api/projects/[projectId]/ai-jobs                          267 B         102 kB
+├ ƒ /api/projects/[projectId]/ai-jobs/retry                    267 B         102 kB
+├ ƒ /api/projects/[projectId]/manager                          267 B         102 kB
+├ ƒ /api/projects/[projectId]/members                          267 B         102 kB
+├ ƒ /api/projects/[projectId]/members/[userId]                 267 B         102 kB
+├ ƒ /api/projects/[projectId]/members/[userId]/weekly-hours    267 B         102 kB
+├ ƒ /api/projects/[projectId]/tags                             267 B         102 kB
+├ ƒ /api/projects/[projectId]/webhook-config                   267 B         102 kB
+├ ƒ /api/projects/[projectId]/weekly-hours                     267 B         102 kB
+├ ƒ /api/projects/ado                                          267 B         102 kB
+├ ƒ /api/projects/ado/[projectId]                              267 B         102 kB
+├ ƒ /api/projects/tags                                         267 B         102 kB
+├ ƒ /api/seed/states                                           267 B         102 kB
+├ ƒ /api/settings                                              267 B         102 kB
+├ ƒ /api/settings/ado                                          267 B         102 kB
+├ ƒ /api/settings/ai-agent                                     267 B         102 kB
+├ ƒ /api/settings/ai-provider                                  267 B         102 kB
+├ ƒ /api/settings/organization                                 267 B         102 kB
+├ ƒ /api/settings/saml                                         267 B         102 kB
+├ ƒ /api/settings/test-ai                                      267 B         102 kB
+├ ƒ /api/settings/verify-ado                                   267 B         102 kB
+├ ƒ /api/states                                                267 B         102 kB
+├ ƒ /api/user/debug                                            267 B         102 kB
+├ ƒ /api/user/direct-fix                                       267 B         102 kB
+├ ƒ /api/user/fix-missing-data                                 267 B         102 kB
+├ ƒ /api/user/profile                                          267 B         102 kB
+├ ƒ /api/user/theme                                            267 B         102 kB
+├ ○ /auth/error                                                993 B         106 kB
+├ ○ /auth/signin                                             3.99 kB         151 kB
+├ ○ /auth/signout                                            1.56 kB         143 kB
+├ ○ /auth/signup                                              3.5 kB         150 kB
+├ ○ /auth/verify-email                                       1.59 kB         107 kB
+├ ○ /blog                                                      196 B         111 kB          5m      1y
+├ ● /blog/[slug]                                               196 B         111 kB
+├ ○ /dashboard                                               5.82 kB         153 kB
+├ ○ /how-to                                                    186 B         105 kB
+├ ○ /privacy                                                   186 B         105 kB
+├ ƒ /projects/[projectId]                                      24 kB         166 kB
+├ ƒ /projects/[projectId]/settings                             22 kB         124 kB
+├ ƒ /projects/[projectId]/weekly-hours                       3.37 kB         109 kB
+├ ○ /projects/azure                                          8.48 kB         150 kB
+├ ○ /settings                                                6.94 kB         149 kB
+├ ○ /terms                                                     186 B         105 kB
+└ ○ /test-email                                               2.3 kB         141 kB
++ First Load JS shared by all                                 102 kB
+  ├ chunks/1684-f58a7978e918102d.js                          46.6 kB
+  ├ chunks/4bd1b696-ec63d4dbc9566966.js                      53.2 kB
+  └ other shared chunks (total)                              2.08 kB
+
+
+○  (Static)   prerendered as static content
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+
