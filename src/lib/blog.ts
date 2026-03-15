@@ -3,16 +3,26 @@
  * Uses the REST API directly (no SDK required on the server side).
  */
 
+import { getSecret } from "./secrets";
+
 const API_BASE = "https://echoseo-f8cb0.web.app/api";
 const SITE_ID = "echoops";
-const CONSUMER_TOKEN =
-    process.env.ECHOSEO_CONSUMER_TOKENS ??
-    "d1167e5f759ca1b0957d37f84d019af7b32a986ca62dba3bfad2efe8348b1709";
 
-const headers = {
-    "x-consumer-token": CONSUMER_TOKEN,
-    "Content-Type": "application/json",
-};
+async function getHeaders() {
+    let token = process.env.ECHOSEO_CONSUMER_TOKENS;
+    if (!token) {
+        try {
+            token = await getSecret("projects/83155172875/secrets/ECHOSEO_CONSUMER_TOKENS");
+        } catch (err) {
+            console.warn("[blog] Could not fetch token from Secret Manager, using fallback.", err);
+            token = "d1167e5f759ca1b0957d37f84d019af7b32a986ca62dba3bfad2efe8348b1709";
+        }
+    }
+    return {
+        "x-consumer-token": token,
+        "Content-Type": "application/json",
+    };
+}
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -40,7 +50,7 @@ export interface BlogPostDetail extends BlogPost {
 export async function getPosts(): Promise<BlogPost[]> {
     try {
         const res = await fetch(`${API_BASE}/posts/?siteId=${SITE_ID}`, {
-            headers,
+            headers: await getHeaders(),
             // Revalidate every 5 minutes in production
             next: { revalidate: 300 },
         });
@@ -78,7 +88,7 @@ export async function getPost(slug: string): Promise<BlogPostDetail | null> {
         const res = await fetch(
             `${API_BASE}/posts/${encodeURIComponent(slug)}/?siteId=${SITE_ID}`,
             {
-                headers,
+                headers: await getHeaders(),
                 next: { revalidate: 300 },
             }
         );

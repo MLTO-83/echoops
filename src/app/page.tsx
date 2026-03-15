@@ -1,8 +1,29 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRightIcon } from "@heroicons/react/20/solid";
+import { ArrowRightIcon, CalendarIcon } from "@heroicons/react/20/solid";
+import {
+  LightBulbIcon,
+  LinkIcon,
+  CpuChipIcon,
+  ChartBarIcon,
+  UserGroupIcon,
+  HeartIcon,
+} from "@heroicons/react/24/outline";
+import { getPosts, formatPostDate, BlogPost } from "@/lib/blog";
 
-export default function Home() {
+const features = [
+  { icon: LightBulbIcon, text: "AI-driven product strategy and roadmap generation" },
+  { icon: LinkIcon, text: "Smart Azure DevOps integration with intelligent insights" },
+  { icon: CpuChipIcon, text: "Multi-AI provider support (OpenAI, Claude, Gemini)" },
+  { icon: ChartBarIcon, text: "Transform project data into product decisions" },
+  { icon: UserGroupIcon, text: "Automated resource allocation and team optimization" },
+  { icon: HeartIcon, text: "Real-time product health monitoring and predictions" },
+];
+
+export default async function Home() {
+  const posts = await getPosts();
+  const latestPosts = posts.slice(0, 3);
+
   return (
     <div className="flex min-h-screen flex-col items-center p-6 md:p-12">
       {/* Floating decoration elements */}
@@ -63,10 +84,12 @@ export default function Home() {
               </h2>
               <p className="mt-6 text-xl text-muted-foreground">
                 EchoOps empowers Project Managers to become strategic Product
-                Builders through AI-driven insights. Seamlessly integrate with
-                Azure DevOps, leverage multi-AI capabilities, and transform
-                project data into actionable product strategies that drive
-                innovation and market success.
+                Builders through AI-driven insights.
+              </p>
+              <p className="mt-3 text-base text-muted-foreground">
+                Seamlessly integrate with Azure DevOps, leverage multi-AI
+                capabilities, and transform project data into actionable product
+                strategies that drive innovation and market success.
               </p>
               <div className="mt-8">
                 <Link
@@ -87,31 +110,11 @@ export default function Home() {
                 </div>
                 <div className="px-4 py-8 sm:px-6 sm:py-10">
                   <ul className="space-y-4 text-left">
-                    {[
-                      "AI-driven product strategy and roadmap generation",
-                      "Smart Azure DevOps integration with intelligent insights",
-                      "Multi-AI provider support (OpenAI, Claude, Gemini)",
-                      "Transform project data into product decisions",
-                      "Automated resource allocation and team optimization",
-                      "Real-time product health monitoring and predictions",
-                    ].map((feature, i) => (
+                    {features.map((feature, i) => (
                       <li className="flex items-start gap-3" key={i}>
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-5 w-5 text-primary mt-0.5 flex-shrink-0"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
+                        <feature.icon className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
                         <span className="text-card-foreground font-medium">
-                          {feature}
+                          {feature.text}
                         </span>
                       </li>
                     ))}
@@ -121,6 +124,90 @@ export default function Home() {
             </div>
           </div>
         </div>
+
+        {/* Latest from our Blog */}
+        {latestPosts.length > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="font-display text-2xl font-bold text-foreground">
+                Latest from our Blog
+              </h2>
+              <Link
+                href="/blog"
+                className="text-sm font-medium text-primary flex items-center gap-1 hover:gap-2 transition-all"
+              >
+                View all posts
+                <ArrowRightIcon className="h-4 w-4" />
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {latestPosts.map((post: BlogPost) => (
+                <Link
+                  key={post.slug}
+                  href={`/blog/${post.slug}`}
+                  className="group card-neo flex flex-col overflow-hidden hover:scale-[1.02] transition-transform duration-200"
+                >
+                  {/* Cover image */}
+                  {post.coverImage && (
+                    <div className="relative w-full h-48 overflow-hidden">
+                      <Image
+                        src={post.coverImage}
+                        alt={post.title}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      />
+                    </div>
+                  )}
+
+                  <div className="flex flex-col flex-1 p-6">
+                    {/* Tags */}
+                    {post.tags && post.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {post.tags.slice(0, 3).map((tag) => (
+                          <span
+                            key={tag}
+                            className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Title */}
+                    <h2 className="font-display text-lg font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2 mb-2">
+                      {post.title}
+                    </h2>
+
+                    {/* Excerpt */}
+                    {(post.excerpt ?? post.description) && (
+                      <p className="text-muted-foreground text-sm line-clamp-3 mb-4 flex-1">
+                        {post.excerpt ?? post.description}
+                      </p>
+                    )}
+
+                    {/* Footer row */}
+                    <div className="flex items-center justify-between mt-auto pt-4 border-t border-border/30">
+                      {/* Date */}
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <CalendarIcon className="h-3.5 w-3.5" />
+                        <span>
+                          {formatPostDate(post.publishedAt ?? post.createdAt)}
+                        </span>
+                      </div>
+                      {/* Read more */}
+                      <span className="text-xs font-medium text-primary flex items-center gap-1 group-hover:gap-2 transition-all">
+                        Read more
+                        <ArrowRightIcon className="h-3.5 w-3.5" />
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Footer */}
