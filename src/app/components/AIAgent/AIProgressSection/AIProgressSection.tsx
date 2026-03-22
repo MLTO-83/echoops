@@ -3,11 +3,25 @@
 import { useState, useEffect } from "react";
 import { formatDistanceToNow } from "date-fns";
 
+interface AIJobStepEntry {
+  step: string;
+  status: "started" | "completed" | "failed";
+  timestamp: string;
+  message?: string;
+  durationMs?: number;
+}
+
 interface AIJob {
   id: string;
   prompt: string;
   repositoryName: string;
   status: string;
+  currentStep?: string | null;
+  stepHistory?: AIJobStepEntry[];
+  retryCount?: number;
+  maxRetries?: number;
+  correlationId?: string | null;
+  reviewFeedback?: string | null;
   adoWorkItemId?: string;
   adoWorkItemTitle?: string;
   pullRequestUrl?: string;
@@ -15,6 +29,27 @@ interface AIJob {
   createdAt: string;
   updatedAt: string;
 }
+
+// Agent pipeline step labels for display
+const STEP_LABELS: Record<string, string> = {
+  RESEARCHING: "Researching",
+  GENERATING_CODE: "Generating Code",
+  REVIEWING_CODE: "Reviewing Code",
+  GETTING_REPO_INFO: "Getting Repo Info",
+  CREATING_BRANCH: "Creating Branch",
+  PUSHING_CODE: "Pushing Code",
+  CREATING_PR: "Creating PR",
+};
+
+const PIPELINE_STEPS = [
+  "RESEARCHING",
+  "GENERATING_CODE",
+  "REVIEWING_CODE",
+  "GETTING_REPO_INFO",
+  "CREATING_BRANCH",
+  "PUSHING_CODE",
+  "CREATING_PR",
+];
 
 interface AIProgressSectionProps {
   projectId: string;
@@ -117,20 +152,24 @@ export default function AIProgressSection({
     }
   };
 
-  // Set up periodic refresh of job data
+  // Set up periodic refresh of job data — poll faster when jobs are in progress
   useEffect(() => {
     if (isWebhookActive) {
       fetchJobs();
 
-      // Refresh job data every 5 minutes (300,000 ms) instead of 30 seconds
-      const interval = setInterval(fetchJobs, 300000);
+      const hasActiveJobs = jobs.some(
+        (j) => j.status === "IN_PROGRESS" || j.status === "PENDING"
+      );
+      // Poll every 10s when jobs are active, every 5 minutes otherwise
+      const pollInterval = hasActiveJobs ? 10000 : 300000;
+      const interval = setInterval(fetchJobs, pollInterval);
       setRefreshInterval(interval);
 
       return () => {
         if (refreshInterval) clearInterval(refreshInterval);
       };
     }
-  }, [isWebhookActive, projectId]);
+  }, [isWebhookActive, projectId, jobs.some((j) => j.status === "IN_PROGRESS" || j.status === "PENDING")]);
 
   // Format job status for display
   const formatJobStatus = (status: string) => {
@@ -205,6 +244,17 @@ export default function AIProgressSection({
       default:
         return "bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200";
     }
+  };
+
+  // Get the step progress for a job
+  const getStepStatus = (job: AIJob, step: string): "pending" | "active" | "completed" | "failed" => {
+    if (job.currentStep === step) return "active";
+    const entries = job.stepHistory || [];
+    const completed = entries.find((e) => e.step === step && e.status === "completed");
+    if (completed) return "completed";
+    const failed = entries.find((e) => e.step === step && e.status === "failed");
+    if (failed) return "failed";
+    return "pending";
   };
 
   // If webhook is not active, don't render anything
@@ -305,12 +355,40 @@ export default function AIProgressSection({
                       {job.repositoryName}
                     </span>
                   </td>
-                  <td className="px-4 py-4 whitespace-nowrap">
+                  <td className="px-4 py-4">
                     <span
                       className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(job.status)}`}
                     >
                       {formatJobStatus(job.status)}
+                      {job.currentStep && ` - ${STEP_LABELS[job.currentStep] || job.currentStep}`}
                     </span>
+                    {job.retryCount > 0 && (
+                      <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">
+                        (retry {job.retryCount}/{job.maxRetries || 3})
+                      </span>
+                    )}
+                    {job.status === "IN_PROGRESS" && job.currentStep && (
+                      <div className="mt-2 flex items-center gap-1">
+                        {PIPELINE_STEPS.map((step) => {
+                          const stepStatus = getStepStatus(job, step);
+                          return (
+                            <div key={step} className="flex items-center" title={STEP_LABELS[step]}>
+                              <div
+                                className={`h-2 w-6 rounded-sm transition-colors ${
+                                  stepStatus === "completed"
+                                    ? "bg-green-500"
+                                    : stepStatus === "active"
+                                    ? "bg-blue-500 animate-pulse"
+                                    : stepStatus === "failed"
+                                    ? "bg-red-500"
+                                    : "bg-gray-200 dark:bg-gray-700"
+                                }`}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                     {formatDistanceToNow(new Date(job.updatedAt), {

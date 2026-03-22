@@ -43,11 +43,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Job not found" }, { status: 404 });
     }
 
-    // Reset the job to PENDING status
+    // Reset the job to PENDING status, clear step progress for fresh run
     const updatedJob = await aiAgentJobs.update(jobId, {
       status: "PENDING",
       errorMessage: null,
-    });
+      currentStep: null,
+      stepHistory: [],
+      retryCount: 0,
+      researchContext: null,
+      reviewFeedback: null,
+    } as Partial<import("@/lib/firebase/types").AIAgentJobDoc>);
 
     return NextResponse.json({ job: updatedJob });
   } catch (error: any) {

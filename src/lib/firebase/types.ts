@@ -129,19 +129,45 @@ export interface AIAgentSettingsDoc {
   updatedAt: Date;
 }
 
+export type AIJobStatus = "PENDING" | "IN_PROGRESS" | "COMPLETED" | "FAILED";
+
+export type AIJobStep =
+  | "RESEARCHING"
+  | "GENERATING_CODE"
+  | "REVIEWING_CODE"
+  | "GETTING_REPO_INFO"
+  | "CREATING_BRANCH"
+  | "PUSHING_CODE"
+  | "CREATING_PR";
+
 export interface AIAgentJobDoc {
   id: string;
   projectId: string;
   prompt: string;
   repositoryName: string;
   status: string;
+  currentStep: AIJobStep | null;
+  stepHistory: AIJobStepEntry[];
+  retryCount: number;
+  maxRetries: number;
   pullRequestUrl: string | null;
   errorMessage: string | null;
   adoWorkItemId: string | null;
   adoWorkItemTitle: string | null;
   adoWorkItemType: string | null;
+  correlationId: string | null;
+  researchContext: string | null;
+  reviewFeedback: string | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface AIJobStepEntry {
+  step: AIJobStep;
+  status: "started" | "completed" | "failed";
+  timestamp: string;
+  message?: string;
+  durationMs?: number;
 }
 
 export interface StateDoc {

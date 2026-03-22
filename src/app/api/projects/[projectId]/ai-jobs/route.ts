@@ -49,7 +49,15 @@ export async function GET(req: NextRequest) {
       .slice(0, 50);
 
     return NextResponse.json({
-      jobs: jobs,
+      jobs: jobs.map((job) => ({
+        ...job,
+        currentStep: job.currentStep || null,
+        stepHistory: job.stepHistory || [],
+        retryCount: job.retryCount || 0,
+        maxRetries: job.maxRetries || 3,
+        correlationId: job.correlationId || null,
+        reviewFeedback: job.reviewFeedback || null,
+      })),
       count: jobs.length,
     });
   } catch (error) {

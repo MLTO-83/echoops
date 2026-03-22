@@ -754,6 +754,16 @@ export const aiAgentJobs = {
     return queryToData<AIAgentJobDoc>(snap);
   },
 
+  async findRetryable(): Promise<AIAgentJobDoc[]> {
+    const snap = await aiAgentJobsCol
+      .where("status", "==", "FAILED")
+      .orderBy("createdAt", "asc")
+      .get();
+    const all = queryToData<AIAgentJobDoc>(snap);
+    // Only return jobs that haven't exhausted their retries
+    return all.filter((job) => (job.retryCount || 0) < (job.maxRetries || 3));
+  },
+
   async create(data: Partial<AIAgentJobDoc>): Promise<AIAgentJobDoc> {
     const now = new Date();
     const docData = stripUndefined({
@@ -761,11 +771,18 @@ export const aiAgentJobs = {
       prompt: data.prompt || "",
       repositoryName: data.repositoryName || "",
       status: data.status || "PENDING",
+      currentStep: null,
+      stepHistory: [],
+      retryCount: 0,
+      maxRetries: 3,
       pullRequestUrl: data.pullRequestUrl || null,
       errorMessage: data.errorMessage || null,
       adoWorkItemId: data.adoWorkItemId || null,
       adoWorkItemTitle: data.adoWorkItemTitle || null,
       adoWorkItemType: data.adoWorkItemType || null,
+      correlationId: data.correlationId || null,
+      researchContext: null,
+      reviewFeedback: null,
       createdAt: now,
       updatedAt: now,
     });
