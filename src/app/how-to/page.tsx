@@ -1,5 +1,18 @@
 import Link from "next/link";
 import Image from "next/image";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "How to Use EchoOps",
+  description:
+    "Step-by-step guide to getting started with EchoOps. Connect Azure DevOps, configure AI providers, and start transforming project data into product strategies.",
+  alternates: { canonical: "/how-to" },
+  openGraph: {
+    title: "How to Use EchoOps",
+    description:
+      "Step-by-step guide to getting started with EchoOps and Azure DevOps integration.",
+  },
+};
 
 export default function HowTo() {
   return (

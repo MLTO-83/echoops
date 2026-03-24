@@ -264,19 +264,62 @@
 
   /* Animation keyframes */
   @keyframes float {
-    0% {
-      transform: translateY(0px);
-    }
-    50% {
-      transform: translateY(-10px);
-    }
-    100% {
-      transform: translateY(0px);
-    }
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+    100% { transform: translateY(0px); }
   }
 
   .animate-float {
     animation: float 5s ease-in-out infinite;
+  }
+
+  @keyframes gradient-shift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  .animate-gradient {
+    background-size: 200% 200%;
+    animation: gradient-shift 6s ease infinite;
+  }
+
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .animate-fade-up {
+    animation: fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  .animate-fade-up-delay-1 { animation-delay: 0.1s; opacity: 0; }
+  .animate-fade-up-delay-2 { animation-delay: 0.2s; opacity: 0; }
+  .animate-fade-up-delay-3 { animation-delay: 0.3s; opacity: 0; }
+  .animate-fade-up-delay-4 { animation-delay: 0.4s; opacity: 0; }
+  .animate-fade-up-delay-5 { animation-delay: 0.5s; opacity: 0; }
+
+  @keyframes pulse-ring {
+    0% { transform: scale(1); opacity: 0.5; }
+    100% { transform: scale(1.5); opacity: 0; }
+  }
+
+  .animate-pulse-ring {
+    animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-gradient,
+    .animate-fade-up,
+    .animate-fade-up-delay-1,
+    .animate-fade-up-delay-2,
+    .animate-fade-up-delay-3,
+    .animate-fade-up-delay-4,
+    .animate-fade-up-delay-5,
+    .animate-float,
+    .animate-pulse-ring {
+      animation: none;
+      opacity: 1;
+    }
   }
 
   /* Layered backdrop */

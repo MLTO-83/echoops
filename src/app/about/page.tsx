@@ -1,5 +1,18 @@
 import Link from "next/link";
 import Image from "next/image";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "About",
+  description:
+    "Learn about EchoOps — the AI-powered platform that transforms Project Managers into Product Builders through Azure DevOps integration and multi-AI insights.",
+  alternates: { canonical: "/about" },
+  openGraph: {
+    title: "About EchoOps",
+    description:
+      "Learn about EchoOps — the AI-powered platform that transforms Project Managers into Product Builders.",
+  },
+};
 
 export default function About() {
   return (

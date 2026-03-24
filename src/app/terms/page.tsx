@@ -1,5 +1,13 @@
 import Link from "next/link";
 import Image from "next/image";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Terms of Service",
+  description:
+    "EchoOps Terms of Service — the terms and conditions for using our AI-powered product building platform.",
+  alternates: { canonical: "/terms" },
+};
 
 export default function Terms() {
   return (

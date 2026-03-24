@@ -1,0 +1,23 @@
+# EchoOps
+
+> AI-Powered Product Building for Azure DevOps
+
+EchoOps is a SaaS platform that transforms Project Managers into Product Builders through AI-driven insights. It integrates with Azure DevOps and leverages multiple AI providers (OpenAI, Claude, Gemini) to turn project data into actionable product strategies.
+
+## Key Features
+
+- AI-driven product strategy and roadmap generation
+- Smart Azure DevOps integration with intelligent insights
+- Multi-AI provider support (OpenAI, Claude, Gemini)
+- Transform project data into product decisions
+- Automated resource allocation and team optimization
+- Real-time product health monitoring and predictions
+
+## Pages
+
+- [Home](https://echoops.dev/)
+- [About](https://echoops.dev/about)
+- [Blog](https://echoops.dev/blog)
+- [How to Use](https://echoops.dev/how-to)
+- [Privacy Policy](https://echoops.dev/privacy)
+- [Terms of Service](https://echoops.dev/terms)

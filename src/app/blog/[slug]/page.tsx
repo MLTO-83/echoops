@@ -1,9 +1,11 @@
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { getPost, getPosts, formatPostDate } from "@/lib/blog";
-import { CalendarIcon, UserIcon, TagIcon } from "@heroicons/react/20/solid";
+import { getPost, getPosts, formatPostDate, BlogPost } from "@/lib/blog";
+import { CalendarIcon, UserIcon, TagIcon, ArrowRightIcon } from "@heroicons/react/20/solid";
 import type { Metadata } from "next";
+import JsonLd from "@/components/seo/JsonLd";
+import Breadcrumbs from "@/components/seo/Breadcrumbs";
 
 // ─── Static params for incremental static regeneration ───────────────────────
 
@@ -26,10 +28,20 @@ export async function generateMetadata({
     return {
         title: `${post.title} | EchoOps Blog`,
         description: post.excerpt ?? post.description ?? post.title,
+        alternates: {
+            canonical: `/blog/${slug}`,
+        },
         openGraph: {
             title: post.title,
             description: post.excerpt ?? post.description,
+            type: "article",
             images: post.coverImage ? [{ url: post.coverImage }] : [],
+        },
+        twitter: {
+            card: "summary_large_image",
+            title: post.title,
+            description: post.excerpt ?? post.description ?? post.title,
+            images: post.coverImage ? [post.coverImage] : [],
         },
     };
 }
@@ -46,38 +58,96 @@ export default async function BlogPostPage({
 
     if (!post) notFound();
 
+    const allPosts = await getPosts();
+    const relatedPosts = allPosts
+        .filter(
+            (p) =>
+                p.slug !== slug &&
+                post.tags &&
+                p.tags &&
+                p.tags.some((t) => post.tags!.includes(t))
+        )
+        .slice(0, 3);
+
     const publishDate = formatPostDate(post.publishedAt ?? post.createdAt);
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://echoops.dev";
+
+    const articleSchema = {
+        "@context": "https://schema.org",
+        "@type": "BlogPosting",
+        headline: post.title,
+        description: post.excerpt ?? post.description ?? post.title,
+        url: `${baseUrl}/blog/${slug}`,
+        datePublished: post.publishedAt ?? post.createdAt,
+        dateModified: post.publishedAt ?? post.createdAt,
+        ...(post.author && {
+            author: {
+                "@type": "Person",
+                name: post.author,
+            },
+        }),
+        publisher: {
+            "@type": "Organization",
+            name: "EchoOps",
+            logo: {
+                "@type": "ImageObject",
+                url: `${baseUrl}/EchoOps logo.png`,
+            },
+        },
+        ...(post.coverImage && {
+            image: post.coverImage,
+        }),
+        ...(post.tags && post.tags.length > 0 && {
+            keywords: post.tags.join(", "),
+        }),
+        mainEntityOfPage: {
+            "@type": "WebPage",
+            "@id": `${baseUrl}/blog/${slug}`,
+        },
+    };
+
+    const breadcrumbSchema = {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: [
+            {
+                "@type": "ListItem",
+                position: 1,
+                name: "Home",
+                item: baseUrl,
+            },
+            {
+                "@type": "ListItem",
+                position: 2,
+                name: "Blog",
+                item: `${baseUrl}/blog`,
+            },
+            {
+                "@type": "ListItem",
+                position: 3,
+                name: post.title,
+                item: `${baseUrl}/blog/${slug}`,
+            },
+        ],
+    };
 
     return (
         <div className="flex min-h-screen flex-col items-center p-6 md:p-12">
+            <JsonLd data={articleSchema} />
+            <JsonLd data={breadcrumbSchema} />
             {/* Floating decoration elements */}
             <div className="fixed top-20 left-10 w-24 h-24 bg-primary/20 rounded-full animate-float blur-xl" />
             <div className="fixed bottom-20 right-10 w-32 h-32 bg-secondary/20 rounded-full animate-pulse-slow blur-xl" />
 
             <div className="w-full max-w-3xl space-y-8">
-                {/* Back nav */}
-                <div className="flex justify-between items-center">
-                    <Link
-                        href="/blog"
-                        className="button-neo text-foreground hover:bg-primary/10 transition-all duration-300 flex items-center gap-2"
-                    >
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-4 w-4"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                        >
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                            />
-                        </svg>
-                        <span>All posts</span>
-                    </Link>
-                </div>
+                {/* Breadcrumb nav */}
+                <Breadcrumbs
+                    items={[
+                        { label: "Home", href: "/" },
+                        { label: "Blog", href: "/blog" },
+                        { label: post.title },
+                    ]}
+                />
 
                 {/* Cover image */}
                 {post.coverImage && (
@@ -102,12 +172,13 @@ export default async function BlogPostPage({
                             <div className="flex flex-wrap items-center gap-2">
                                 <TagIcon className="h-4 w-4 text-muted-foreground" />
                                 {post.tags.map((tag) => (
-                                    <span
+                                    <Link
                                         key={tag}
-                                        className="text-xs px-2.5 py-1 rounded-full bg-primary/10 text-primary font-medium"
+                                        href={`/blog/tag/${encodeURIComponent(tag)}`}
+                                        className="text-xs px-2.5 py-1 rounded-full bg-primary/10 text-primary font-medium hover:bg-primary/20 transition-colors"
                                     >
                                         {tag}
-                                    </span>
+                                    </Link>
                                 ))}
                             </div>
                         )}
@@ -151,6 +222,45 @@ export default async function BlogPostPage({
                         )}
                     </div>
                 </article>
+
+                {/* Related Posts */}
+                {relatedPosts.length > 0 && (
+                    <div className="space-y-4">
+                        <h2 className="font-display text-xl font-bold text-foreground">
+                            Related Posts
+                        </h2>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {relatedPosts.map((related: BlogPost) => (
+                                <Link
+                                    key={related.slug}
+                                    href={`/blog/${related.slug}`}
+                                    className="group card-neo flex flex-col overflow-hidden hover:scale-[1.02] transition-transform duration-200"
+                                >
+                                    {related.coverImage && (
+                                        <div className="relative w-full h-32 overflow-hidden">
+                                            <Image
+                                                src={related.coverImage}
+                                                alt={related.title}
+                                                fill
+                                                className="object-cover group-hover:scale-105 transition-transform duration-300"
+                                                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                                            />
+                                        </div>
+                                    )}
+                                    <div className="p-4">
+                                        <h3 className="font-display text-sm font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2">
+                                            {related.title}
+                                        </h3>
+                                        <span className="mt-2 text-xs font-medium text-primary flex items-center gap-1 group-hover:gap-2 transition-all">
+                                            Read more
+                                            <ArrowRightIcon className="h-3 w-3" />
+                                        </span>
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {/* Back to blog CTA */}
                 <div className="text-center pb-8">

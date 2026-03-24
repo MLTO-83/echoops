@@ -1,9 +1,54 @@
 import type { Metadata, Viewport } from "next";
 
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://echoops.dev";
+
 export const metadata: Metadata = {
-  title: "EchoOps",
-  description: "Azure DevOps integration platform",
+  metadataBase: new URL(baseUrl),
+  title: {
+    default: "EchoOps — AI-Powered Product Building for Azure DevOps",
+    template: "%s | EchoOps",
+  },
+  description:
+    "Transform Project Managers into Product Builders with AI-driven insights. Integrate Azure DevOps, leverage multi-AI capabilities, and turn project data into actionable product strategies.",
   manifest: "/favicon/manifest.json",
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: baseUrl,
+    siteName: "EchoOps",
+    title: "EchoOps — AI-Powered Product Building for Azure DevOps",
+    description:
+      "Transform Project Managers into Product Builders with AI-driven insights. Integrate Azure DevOps, leverage multi-AI capabilities, and turn project data into actionable product strategies.",
+    images: [
+      {
+        url: "/EchoOps logo.png",
+        width: 1200,
+        height: 630,
+        alt: "EchoOps — AI-Powered Product Building",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "EchoOps — AI-Powered Product Building for Azure DevOps",
+    description:
+      "Transform Project Managers into Product Builders with AI-driven insights.",
+    images: ["/EchoOps logo.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
   icons: {
     icon: [
       { url: "/favicon/favicon-16x16.png", sizes: "16x16", type: "image/png" },

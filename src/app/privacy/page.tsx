@@ -1,5 +1,13 @@
 import Link from "next/link";
 import Image from "next/image";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Privacy Policy",
+  description:
+    "EchoOps Privacy Policy — how we collect, use, and protect your data when using our AI-powered product building platform.",
+  alternates: { canonical: "/privacy" },
+};
 
 export default function Privacy() {
   return (
